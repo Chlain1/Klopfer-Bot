@@ -6,12 +6,6 @@
 1. Python
 2. Discord.py
 
-# If You have Github Desktop use this
-```
-git clone https://github.com/SamArroyos22/Discord.py-Bot-Commands
-```
-Then Open Up The File Named ReadMe.txt
-
 # Video Tutorial
 
 https://www.youtube.com/watch?v=gLDdSotHdDI
@@ -19,7 +13,7 @@ https://www.youtube.com/watch?v=gLDdSotHdDI
 # How To Set Up The Bot
 
 1. Download The Zip File If you dont have Github Desktop
-2. Open The "ReadMe.txt" file
+2. Open The "ReadMe.md" file
 3. Go To [Here](https://discordapp.com/developers/applications/me/) To Get Your Bots ID, Token,
 4. Next to get your Bots Invite link Go [Here](https://discordapi.com/permissions.html) and Get your Bots id and paste it into the "Client Id Here"
 5. Select the Perms You want the bot to have and copy the invite link and paste it into the "link" in the "Config.py" File
@@ -28,6 +22,5 @@ https://www.youtube.com/watch?v=gLDdSotHdDI
 
 # Issues
 
-1. Join My Help server Here : https://discord.gg/BzTaYZT
 2. Open up an Issue
 
