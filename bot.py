@@ -287,6 +287,8 @@ class DiscordBot(commands.Bot):
             raise error
 
 
+
+
 load_dotenv()
 
 bot = DiscordBot()
