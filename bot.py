@@ -5,18 +5,20 @@ Description:
 
 Version: 6.1.0
 """
-
+import datetime
 import json
 import logging
 import os
 import platform
 import random
 import sys
+import asyncio
+from datetime import datetime, timedelta
 
 import aiosqlite
 import discord
 from discord.ext import commands, tasks
-from discord.ext.commands import Context
+from discord.ext.commands import Context, bot
 from dotenv import load_dotenv
 
 from database import DatabaseManager
@@ -201,6 +203,7 @@ class DiscordBot(commands.Bot):
                 f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
             )
         )
+        await self.did_you_klopf()
 
     async def on_message(self, message: discord.Message) -> None:
         """
@@ -286,7 +289,25 @@ class DiscordBot(commands.Bot):
         else:
             raise error
 
+    async def did_you_klopf(self):
+        while True:
+            #Get current Time
+            currentTime = datetime.now()
 
+            #Check if minutes == hours
+            if currentTime.hour == currentTime.minute-1:
+                embed = discord.Embed(
+                    description='Naaaaaa? Habt ihr geklopft?'
+                )
+                channel = self.get_channel(778976736296566814)
+                if channel:
+                    await channel.send(embed=embed)
+
+            # Sleep for a minute before checking again
+            await asyncio.sleep(60)
+
+
+# Run the client with your Discord bot token
 load_dotenv()
 
 bot = DiscordBot()
