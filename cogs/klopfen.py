@@ -33,12 +33,9 @@ class Klopf(commands.Cog, name="klopf"):
 
         # user_roles = [r.name.lower() for r in context.message.author.roles]
 
-        if context.message.author.id in [778977339660697630]:
-            embed = discord.Embed(
-                description='Du nimmst noch nicht teil, nimm teil mit kjoin um Klopfen zu können.'
-            )
-            await context.send(embed=embed)
-        else:
+
+
+        if 778977339660697630 in [role.id for role in context.message.author.roles]:
             currentTime = datetime.now().strftime(r"%I:%M %p")
             legalTime = ["12:00 AM", "01:01 AM", "02:02 AM", "03:03 AM", "04:04 AM", "05:05 AM", "06:06 AM", "07:07 AM",
                          "08:08 AM", "09:09 AM", "10:10 AM", "11:11 AM", "12:12 PM", "01:13 PM", "02:14 PM", "03:15 PM",
@@ -53,6 +50,11 @@ class Klopf(commands.Cog, name="klopf"):
                     description='Duu H*** hast falsch geklopft'
                 )
                 await context.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                description='Du nimmst noch nicht teil, nimm teil mit kjoin um Klopfen zu können.'
+            )
+            await context.send(embed=embed)
 
     @commands.hybrid_command(
         name="kjoin",
@@ -64,10 +66,11 @@ class Klopf(commands.Cog, name="klopf"):
 
         :param context: The application command context.
         """
-
+        role_id = 778977339660697630
+        role = context.guild.get_role(role_id)
         user_roles = [r.name.lower() for r in context.message.author.roles]
 
-        if context.message.author.id in [778977339660697630]:   #TODO fix this not doing what it should
+        if 778977339660697630 in [role.id for role in context.message.author.roles]:
             embed = discord.Embed(
                 description='Du nimmst doch schon teil, wasn dein Problem.'
             )
