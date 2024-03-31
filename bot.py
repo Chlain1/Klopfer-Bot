@@ -203,7 +203,7 @@ class DiscordBot(commands.Bot):
                 f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
             )
         )
-        # await self.did_you_klopf()
+        await self.did_you_klopf()
 
     async def on_message(self, message: discord.Message) -> None:
         """
@@ -289,7 +289,7 @@ class DiscordBot(commands.Bot):
         else:
             raise error
 
-    async def did_you_klopf(self):
+    async def send_periodic_message(self):
         while True:
             #Get current Time
             currentTime = datetime.now()
@@ -305,6 +305,10 @@ class DiscordBot(commands.Bot):
 
             # Sleep for a minute before checking again
             await asyncio.sleep(60)
+
+    async def did_you_klopf(self):
+        asyncio.create_task(self.send_periodic_message())
+
 
 
 # Run the client with your Discord bot token
