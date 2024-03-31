@@ -203,7 +203,7 @@ class DiscordBot(commands.Bot):
                 f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
             )
         )
-        await self.did_you_klopf()
+        # await self.did_you_klopf()
 
     async def on_message(self, message: discord.Message) -> None:
         """
