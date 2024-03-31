@@ -36,18 +36,19 @@ class Klopf(commands.Cog, name="klopf"):
 
 
         if 778977339660697630 in [role.id for role in context.message.author.roles]:
-            currentTime = datetime.now().strftime(r"%I:%M %p")
-            legalTime = ["12:00 AM", "01:01 AM", "02:02 AM", "03:03 AM", "04:04 AM", "05:05 AM", "06:06 AM", "07:07 AM",
-                         "08:08 AM", "09:09 AM", "10:10 AM", "11:11 AM", "12:12 PM", "01:13 PM", "02:14 PM", "03:15 PM",
-                         "04:16 PM", "05:17 PM", "06:18 PM", "07:19 PM", "08:20 PM", "09:21 PM", "10:22 PM", "11:23 PM"]
-            if currentTime in legalTime:
+            currentTime = datetime.now()
+            hour = currentTime.hour
+            minute = currentTime.minute
+            hourStr = str(hour).zfill(2)
+            minuteStr = str(minute).zfill(2)
+            if hour == minute:
                 embed = discord.Embed(
-                    description='Gut gemacht! Du hast richtig geklopft'
+                    description='Gut gemacht! Du hast um ' + hourStr + ':' + minuteStr + ' richtig geklopft'
                 )
                 await context.send(embed=embed)
             else:
                 embed = discord.Embed(
-                    description='Duu H*** hast falsch geklopft'
+                    description='Duu H***, was ist an ' + hourStr + ':' + minuteStr + ' richtig? Du hast obviously falsch geklopft! Aber ich will mal nicht so sein, du weist ja, keep yourself safe!'
                 )
                 await context.send(embed=embed)
         else:
