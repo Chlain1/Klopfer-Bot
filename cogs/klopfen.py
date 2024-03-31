@@ -5,10 +5,9 @@ Description:
 
 Version: 6.1.0
 """
-
+import discord
 from discord.ext import commands
 from discord.ext.commands import Context
-import time
 from datetime import datetime
 
 
@@ -23,7 +22,7 @@ class Klopf(commands.Cog, name="klopf"):
         name="klopf",
         description="This is the klopf",
     )
-    async def klopf(self, ctx: Context) -> None:
+    async def klopf(self, context: Context) -> None:
         """
         This is a testing command that does nothing.
 
@@ -32,22 +31,56 @@ class Klopf(commands.Cog, name="klopf"):
 
         '''a person is doing the klopf'''
 
-        user_roles = [r.name.lower() for r in ctx.message.author.roles]
+        # user_roles = [r.name.lower() for r in context.message.author.roles]
 
-        if "Klopfer-Teilnehmer" not in user_roles:
-            pass
-            #TODO print "Du nimmst noch nicht teil, nimm teil mit kjoin um Klopfen zu können."
+        if context.message.author.id in [778977339660697630]:
+            embed = discord.Embed(
+                description='Du nimmst noch nicht teil, nimm teil mit kjoin um Klopfen zu können.'
+            )
+            await context.send(embed=embed)
         else:
             currentTime = datetime.now().strftime(r"%I:%M %p")
-            legalTime = ["12:12 AM", "01:01 AM", "02:02 AM", "03:03 AM", "04:04 AM", "05:05 AM", "06:06 AM", "07:07 AM",
-                         "08:08 AM", "09:09 AM", "10:10 AM", "11:11 AM", "12:12 PM", "01:01 PM", "02:02 PM", "03:03 PM",
-                         "04:04 PM", "05:05 PM", "06:06 PM", "07:07 PM", "08:08 PM", "09:09 PM", "10:10 PM", "11:11 PM"]
+            legalTime = ["12:00 AM", "01:01 AM", "02:02 AM", "03:03 AM", "04:04 AM", "05:05 AM", "06:06 AM", "07:07 AM",
+                         "08:08 AM", "09:09 AM", "10:10 AM", "11:11 AM", "12:12 PM", "01:13 PM", "02:14 PM", "03:15 PM",
+                         "04:16 PM", "05:17 PM", "06:18 PM", "07:19 PM", "08:20 PM", "09:21 PM", "10:22 PM", "11:23 PM"]
             if currentTime in legalTime:
-                pass
-                #TODO print "Gut gemacht! Du hast richtig geklopft"
+                embed = discord.Embed(
+                    description='Gut gemacht! Du hast richtig geklopft'
+                )
+                await context.send(embed=embed)
             else:
-                pass
-                #TODO "Duu H*** hast falsch geklopft"
+                embed = discord.Embed(
+                    description='Duu H*** hast falsch geklopft'
+                )
+                await context.send(embed=embed)
+
+    @commands.hybrid_command(
+        name="kjoin",
+        description="With this command you join the klopf",
+    )
+    async def kjoin(self, context: Context) -> None:
+        """
+        This is a command with which the users can join the klopf
+
+        :param context: The application command context.
+        """
+
+        user_roles = [r.name.lower() for r in context.message.author.roles]
+
+        if context.message.author.id in [778977339660697630]:   #TODO fix this not doing what it should
+            embed = discord.Embed(
+                description='Du nimmst doch schon teil, wasn dein Problem.'
+            )
+            await context.send(embed=embed)
+        else:
+            member = context.message.author
+            role = context.guild.get_role(778977339660697630)
+            await member.add_roles(role)
+            embed = discord.Embed(
+                description='Du nimmst nun Teil'
+            )
+            await context.send(embed=embed)
+
 
 
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.

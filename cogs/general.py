@@ -102,11 +102,11 @@ class General(commands.Cog, name="general"):
         :param context: The hybrid command context.
         """
         embed = discord.Embed(
-            description="Used [Krypton's](https://krypton.ninja) template",
+            description="Renewed Klopfer Bot",
             color=0xBEBEFE,
         )
         embed.set_author(name="Bot Information")
-        embed.add_field(name="Owner:", value="Krypton#7331", inline=True)
+        embed.add_field(name="Owner:", value="Chlain", inline=True)
         embed.add_field(
             name="Python Version:", value=f"{platform.python_version()}", inline=True
         )
@@ -166,45 +166,7 @@ class General(commands.Cog, name="general"):
         )
         await context.send(embed=embed)
 
-    @commands.hybrid_command(
-        name="invite",
-        description="Get the invite link of the bot to be able to invite it.",
-    )
-    async def invite(self, context: Context) -> None:
-        """
-        Get the invite link of the bot to be able to invite it.
 
-        :param context: The hybrid command context.
-        """
-        embed = discord.Embed(
-            description=f"Invite me by clicking [here]({self.bot.config['invite_link']}).",
-            color=0xD75BF4,
-        )
-        try:
-            await context.author.send(embed=embed)
-            await context.send("I sent you a private message!")
-        except discord.Forbidden:
-            await context.send(embed=embed)
-
-    @commands.hybrid_command(
-        name="server",
-        description="Get the invite link of the discord server of the bot for some support.",
-    )
-    async def server(self, context: Context) -> None:
-        """
-        Get the invite link of the discord server of the bot for some support.
-
-        :param context: The hybrid command context.
-        """
-        embed = discord.Embed(
-            description=f"Join the support server for the bot by clicking [here](https://discord.gg/mTBrXyWxAF).",
-            color=0xD75BF4,
-        )
-        try:
-            await context.author.send(embed=embed)
-            await context.send("I sent you a private message!")
-        except discord.Forbidden:
-            await context.send(embed=embed)
 
     @commands.hybrid_command(
         name="8ball",
@@ -248,37 +210,6 @@ class General(commands.Cog, name="general"):
         embed.set_footer(text=f"The question was: {question}")
         await context.send(embed=embed)
 
-    @commands.hybrid_command(
-        name="bitcoin",
-        description="Get the current price of bitcoin.",
-    )
-    async def bitcoin(self, context: Context) -> None:
-        """
-        Get the current price of bitcoin.
-
-        :param context: The hybrid command context.
-        """
-        # This will prevent your bot from stopping everything when doing a web request - see: https://discordpy.readthedocs.io/en/stable/faq.html#how-do-i-make-a-web-request
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://api.coindesk.com/v1/bpi/currentprice/BTC.json"
-            ) as request:
-                if request.status == 200:
-                    data = await request.json(
-                        content_type="application/javascript"
-                    )  # For some reason the returned content is of type JavaScript
-                    embed = discord.Embed(
-                        title="Bitcoin price",
-                        description=f"The current price is {data['bpi']['USD']['rate']} :dollar:",
-                        color=0xBEBEFE,
-                    )
-                else:
-                    embed = discord.Embed(
-                        title="Error!",
-                        description="There is something wrong with the API, please try again later",
-                        color=0xE02B2B,
-                    )
-                await context.send(embed=embed)
 
 
 async def setup(bot) -> None:
