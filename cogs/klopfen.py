@@ -66,9 +66,6 @@ class Klopf(commands.Cog, name="klopf"):
 
         :param context: The application command context.
         """
-        role_id = 778977339660697630
-        role = context.guild.get_role(role_id)
-        user_roles = [r.name.lower() for r in context.message.author.roles]
 
         if 778977339660697630 in [role.id for role in context.message.author.roles]:
             embed = discord.Embed(
@@ -84,6 +81,32 @@ class Klopf(commands.Cog, name="klopf"):
             )
             await context.send(embed=embed)
 
+
+    @commands.hybrid_command(
+        name="kleave",
+        description="With this command you leave the klopf",
+    )
+    async def kleave(self, context: Context) -> None:
+        """
+        This is a command with which the users can join the klopf
+
+        :param context: The application command context.
+        """
+
+
+        if 778977339660697630 in [role.id for role in context.message.author.roles]:
+            member = context.message.author
+            role = context.guild.get_role(778977339660697630)
+            await member.remove_roles(role)
+            embed = discord.Embed(
+                description='Du nimmst nun nicht mehr Teil'
+            )
+            await context.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                description='Du nimmst doch schon nicht teil, wasn dein Problem.'
+            )
+            await context.send(embed=embed)
 
 
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.
