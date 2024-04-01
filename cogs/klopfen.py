@@ -12,6 +12,9 @@ from discord.ext import commands
 from discord.ext.commands import Context
 from datetime import datetime
 
+import bot
+
+LEADERBOARD_FILE = 'leaderboard.json'
 
 # Here we name the cog and create a new class for the cog.
 class Klopf(commands.Cog, name="klopf"):
@@ -20,40 +23,21 @@ class Klopf(commands.Cog, name="klopf"):
 
     usage_stats = {}
 
-    def load_leaderboard(self):
-        try:
-            with open("leaderboard.json", "r") as file:
-                return json.load(file)
-        except FileNotFoundError:
-            print("Leaderboard file not found.")
-            return {"usage_stats": {}}
+    try:
+        with open(LEADERBOARD_FILE, 'r') as file:
+            leaderboard = json.load(file)
+    except FileNotFoundError:
+        leaderboard = {}
 
+    def update_leaderboard(self, user_id, correct=True):
+        if correct:
+            self.leaderboard['correct_times'][user_id] = self.leaderboard['correct_times'].get(user_id, 0) + 1
+        else:
+            self.leaderboard['wrong_times'][user_id] = self.leaderboard['wrong_times'].get(user_id, 0) + 1
 
     def save_leaderboard(self):
-        with open("leaderboard.json", "w") as file:
-            json.dump({"usage_stats": self.usage_stats}, file, indent=4)
-
-    def update_leaderboard(self, user_id, correct_time=False, wrong_time=False):
-        if user_id not in self.usage_stats:
-            self.usage_stats[user_id] = {"correct_time": 0, "wrong_time": 0}
-
-        if correct_time:
-            self.usage_stats[user_id]["correct_time"] += 1
-        elif wrong_time:
-            self.usage_stats[user_id]["wrong_time"] += 1
-
-        self.save_leaderboard() #Saves Leaderboard after every update
-
-
-    def process_command(self, user_id, hour, minute):
-        if hour == minute:
-            self.update_leaderboard(user_id, correct_time=True)
-        elif hour != minute:
-            self.update_leaderboard(user_id, wrong_time=True)
-
-    @commands.Cog.listener()
-    async def on_command_completion(self, context):
-        self.save_leaderboard()
+        with open(LEADERBOARD_FILE, 'w') as file:
+            json.dump(self.leaderboard, file)
 
     @commands.hybrid_command(
         name="leaderboard",
@@ -65,28 +49,19 @@ class Klopf(commands.Cog, name="klopf"):
         :param context: The application command context
         """
 
-        print("Usage Stats:", self.usage_stats)
+        embed = discord.Embed(
+            title="Leaderboard:"
+        )
 
-        if self.usage_stats:
-            embed = discord.Embed(
-                title="Leaderboard",
-                description=""
-            )
-            for user_id, stats in self.usage_stats.items():
-                member = context.guild.get_member(int(user_id))
-                if member:
-                    username = member.display_name
-                    correct_time = str(stats.get("correct_time", 0))
-                    wrong_time = str(stats.get("wrong_time", 0))
-                    embed.description = embed.description + username + ": Correct Time - " + correct_time + ", Wrong Time - " + wrong_time + "\n" #TODO: fix this shitshow
-
-        else:
-            embed = discord.Embed(
-                title="Leaderboard",
-                description="No stats available"
-            )
-
+        embed.add_field(name="Correct Times", value="**User ID**: *Times*", inline=False)
+        """
+        for user_id, times in self.leaderboard['correct_times'].items():
+            user = await Client.fetch.user(user_id)
+            if user:
+                embed.add_field(name=user.name, value=f"{times}", inline=False)
+        """
         await context.send(embed=embed)
+
 
 
     @commands.hybrid_command(
@@ -103,25 +78,22 @@ class Klopf(commands.Cog, name="klopf"):
         '''a person is doing the klopf'''
 
         if 778977339660697630 in [role.id for role in context.message.author.roles]:
-
-            user_id = str(context.message.author.id)
-            if user_id not in self.usage_stats:
-                self.usage_stats[user_id] = {"correct_time": 0, "wrong_time": 0}
-
             currentTime = datetime.now()
             hour = currentTime.hour
             minute = currentTime.minute
             hourStr = str(hour).zfill(2)
             minuteStr = str(minute).zfill(2)
             if hour == minute:
-                self.usage_stats[user_id]["correct_time"] += 1
+                self.update_leaderboard(context.author.id, correct=True)
+                self.save_leaderboard()
                 embed = discord.Embed(
                     description='Gut gemacht! Du hast um ' + hourStr + ':' + minuteStr + ' richtig geklopft',
                     colour=0x00FF00
                 )
                 await context.send(embed=embed)
             else:
-                self.usage_stats[user_id]["wrong_time"] += 1
+                self.update_leaderboard(context.author.id, correct=False)
+                self.save_leaderboard()
                 embed = discord.Embed(
                     description='Duu H***, was ist an ' + hourStr + ':' + minuteStr + ' richtig? Du hast obviously falsch geklopft! Aber ich will mal nicht so sein, du weist ja, keep yourself safe!',
                     color=0xFF0000
