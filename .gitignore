@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+#Leaderboard.json
+leaderboard.json
+
 # Distribution / packaging
 .Python
 build/
