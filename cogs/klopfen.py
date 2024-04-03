@@ -12,7 +12,6 @@ from discord.ext import commands
 from discord.ext.commands import Context
 from datetime import datetime
 
-import bot
 
 LEADERBOARD_FILE = 'leaderboard.json'
 
@@ -20,22 +19,24 @@ LEADERBOARD_FILE = 'leaderboard.json'
 class Klopf(commands.Cog, name="klopf"):
     def __init__(self, bot) -> None:
         self.bot = bot
+        try:
+            with open(LEADERBOARD_FILE, 'r') as file:
+                self.leaderboard = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.leaderboard = {}
 
-    usage_stats = {}
+    async def update_leaderboard(self, user_id, correct=True):
+        if user_id not in self.leaderboard:
+            self.leaderboard[user_id] = {'correct_times': 0, 'wrong_times': 0}
 
-    try:
-        with open(LEADERBOARD_FILE, 'r') as file:
-            leaderboard = json.load(file)
-    except FileNotFoundError:
-        leaderboard = {}
-
-    def update_leaderboard(self, user_id, correct=True):
         if correct:
-            self.leaderboard['correct_times'][user_id] = self.leaderboard['correct_times'].get(user_id, 0) + 1
+            self.leaderboard[user_id]['correct_times'] += 1
         else:
-            self.leaderboard['wrong_times'][user_id] = self.leaderboard['wrong_times'].get(user_id, 0) + 1
+            self.leaderboard[user_id]['wrong_times'] += 1
 
-    def save_leaderboard(self):
+        await self.save_leaderboard()
+
+    async def save_leaderboard(self):
         with open(LEADERBOARD_FILE, 'w') as file:
             json.dump(self.leaderboard, file)
 
@@ -50,16 +51,18 @@ class Klopf(commands.Cog, name="klopf"):
         """
 
         embed = discord.Embed(
-            title="Leaderboard:"
+            title="Leaderboard:",
+            colour=0xC0DC04
         )
 
-        embed.add_field(name="Correct Times", value="**User ID**: *Times*", inline=False)
-        """
-        for user_id, times in self.leaderboard['correct_times'].items():
-            user = await Client.fetch.user(user_id)
+        #embed.add_field(name="Correct Times", value="**User ID**: *Times*", inline=False)
+        for user_id, stats in self.leaderboard.items():
+            user = context.guild.get_member(int(user_id))
             if user:
-                embed.add_field(name=user.name, value=f"{times}", inline=False)
-        """
+                embed.add_field(
+                    name=user.name,
+                    value=f"Correct Times: {stats['correct_times']}, Wrong Times: {stats['wrong_times']}",
+                    inline=False)
         await context.send(embed=embed)
 
 
@@ -83,28 +86,30 @@ class Klopf(commands.Cog, name="klopf"):
             minute = currentTime.minute
             hourStr = str(hour).zfill(2)
             minuteStr = str(minute).zfill(2)
+            print("before if!")
             if hour == minute:
-                self.update_leaderboard(context.author.id, correct=True)
-                self.save_leaderboard()
+                print("if hour == minutes starts")
+                await self.update_leaderboard(str(context.author.id), correct=True)
                 embed = discord.Embed(
                     description='Gut gemacht! Du hast um ' + hourStr + ':' + minuteStr + ' richtig geklopft',
                     colour=0x00FF00
                 )
                 await context.send(embed=embed)
+                print("if hour == minutes finished")
             else:
-                self.update_leaderboard(context.author.id, correct=False)
-                self.save_leaderboard()
+                print("else hour == minutes starts")
+                await self.update_leaderboard(str(context.author.id), correct=False)
                 embed = discord.Embed(
                     description='Duu H***, was ist an ' + hourStr + ':' + minuteStr + ' richtig? Du hast obviously falsch geklopft! Aber ich will mal nicht so sein, du weist ja, keep yourself safe!',
                     color=0xFF0000
                 )
                 await context.send(embed=embed)
+                print("else hour == minutes ends")
         else:
             embed = discord.Embed(
                 description='Du nimmst noch nicht teil, nimm teil mit kjoin um Klopfen zu können.'
             )
             await context.send(embed=embed)
-        print("Usage Stats:", self.usage_stats)
 
     @commands.hybrid_command(
         name="kjoin",
