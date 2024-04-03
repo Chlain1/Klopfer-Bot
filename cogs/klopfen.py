@@ -25,6 +25,7 @@ class Klopf(commands.Cog, name="klopf"):
         except (FileNotFoundError, json.JSONDecodeError):
             self.leaderboard = {}
 
+
     async def update_leaderboard(self, user_id, correct=True):
         if user_id not in self.leaderboard:
             self.leaderboard[user_id] = {'correct_times': 0, 'wrong_times': 0}
@@ -87,15 +88,18 @@ class Klopf(commands.Cog, name="klopf"):
             hourStr = str(hour).zfill(2)
             minuteStr = str(minute).zfill(2)
             print("before if!")
-            if hour == minute:
+            if hour == minute and 1225212871462355034 not in [role.id for role in context.message.author.roles]:
                 print("if hour == minutes starts")
                 await self.update_leaderboard(str(context.author.id), correct=True)
                 embed = discord.Embed(
                     description='Gut gemacht! Du hast um ' + hourStr + ':' + minuteStr + ' richtig geklopft',
                     colour=0x00FF00
                 )
+                member = context.message.author
+                role = context.guild.get_role(1225212871462355034)
+                await member.add_roles(role)
                 await context.send(embed=embed)
-                print("if hour == minutes finished")
+
             else:
                 print("else hour == minutes starts")
                 await self.update_leaderboard(str(context.author.id), correct=False)
