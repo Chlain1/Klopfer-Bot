@@ -310,6 +310,27 @@ class DiscordBot(commands.Bot):
     async def did_you_klopf(self):
         asyncio.create_task(self.send_periodic_message())
 
+    # Define your background task to remove the role when hours == minute + 1
+    @tasks.loop(hours=1)
+    async def remove_role_task(self):
+        # Get the server/guild object (replace GUILD_ID with your server's ID)
+        guild = bot.get_guild(746337211074478190)
+
+        # Get the role object
+        role = guild.get_role(1225212871462355034)
+
+        # Check if the role exists
+        if role:
+            # Get the current hour and minute
+            current_time = datetime.now()
+            hour = current_time.hour
+            minute = current_time.minute
+
+            # Check if the current hour is equal to the current minute plus one
+            if hour == (minute + 1) % 24:
+                # Loop through all members and remove the role
+                for member in guild.members:
+                    await member.remove_roles(role)
 
 
 # Run the client with your Discord bot token
