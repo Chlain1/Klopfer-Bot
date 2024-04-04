@@ -126,11 +126,13 @@ logger.addHandler(file_handler)
 
 
 class DiscordBot(commands.Bot):
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(
             command_prefix=commands.when_mentioned_or(config["prefix"]),
             intents=intents,
             help_command=None,
+            *args,
+            **kwargs
         )
         """
         This creates custom bot variables so that we can access these variables in cogs more easily.
@@ -205,6 +207,7 @@ class DiscordBot(commands.Bot):
             )
         )
         await self.did_you_klopf()
+        self.check_time.start()
 
     async def on_message(self, message: discord.Message) -> None:
         """
@@ -303,34 +306,37 @@ class DiscordBot(commands.Bot):
                 channel = self.get_channel(778976736296566814)
                 if channel:
                     await channel.send(embed=embed)
-
             # Sleep for a minute before checking again
             await asyncio.sleep(60)
 
     async def did_you_klopf(self):
         asyncio.create_task(self.send_periodic_message())
 
-    # Define your background task to remove the role when hours == minute + 1
-    @tasks.loop(hours=1)
-    async def remove_role_task(self):
-        # Get the server/guild object (replace GUILD_ID with your server's ID)
-        guild = bot.get_guild(746337211074478190)
+    @tasks.loop(minutes=1)
+    async def check_time(self):
+        now = datetime.now()
+        guild_id = 746337211074478190
+        role_id = 1225212871462355034
+        if now.hour == (now.minute + 1) % 60:
+            guild = bot.get_guild(guild_id)
+            print("its hour == minute+1 baby")
+            if guild is None:
+                print(f"Guild with id {guild_id} not found")
+                return
 
-        # Get the role object
-        role = guild.get_role(1225212871462355034)
+            role = guild.get_role(role_id)
+            if role is None:
+                print(f"Role with id {role_id} not found")
+                return
 
-        # Check if the role exists
-        if role:
-            # Get the current hour and minute
-            current_time = datetime.now()
-            hour = current_time.hour
-            minute = current_time.minute
+            for member in guild.members:
+                if role in member.roles:
+                    try:
+                        await member.remove_roles(role)
+                        print(f"Role {role.name} has been removed from {member.name}")
+                    except discord.HTTPException:
+                        print(f"Failed to remove role {role.name} from {member.name}")
 
-            # Check if the current hour is equal to the current minute plus one
-            if hour == (minute + 1) % 24:
-                # Loop through all members and remove the role
-                for member in guild.members:
-                    await member.remove_roles(role)
 
 
 # Run the client with your Discord bot token
