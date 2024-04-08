@@ -113,6 +113,31 @@ python bot.py
 
 > **Note** You may need to replace `python` with `py`, `python3`, `python3.11`, etc. depending on what Python versions you have installed on the machine.
 
+You'll need ffmpeg to play music. 
+
+Linux:
+To install `ffmpeg` on Ubuntu 20.04, you can use the `apt` package manager. Here are the steps:
+
+1. First, update your package list:
+
+```bash
+sudo apt update
+```
+
+2. Then, install `ffmpeg`:
+
+```bash
+sudo apt install ffmpeg
+```
+
+3. After the installation is complete, you can verify the installation by checking the version of `ffmpeg`:
+
+```bash
+ffmpeg -version
+```
+
+This should display the version of `ffmpeg` that was installed.
+
 ## Issues or Questions
 
 If you have any issues or questions of how to code a specific command, you can:
@@ -132,5 +157,7 @@ the [tags on this repository](https://github.com/kkrypt0nn/Python-Discord-Bot-Te
 - [Python 3.11.5](https://www.python.org/)
 
 ## License
+
+
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details
