@@ -5,3 +5,5 @@ discord
 python-dotenv
 pytube
 PyNaCl
+lavalink
+pafy
