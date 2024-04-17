@@ -317,7 +317,7 @@ class DiscordBot(commands.Bot):
         now = datetime.now()
         guild_id = 746337211074478190
         role_id = 1225212871462355034
-        if now.hour == (now.minute + 1) % 60:
+        if now.hour == (now.minute + 1) % 60 or (now.hour == 23 and now.minute == 59):
             guild = bot.get_guild(guild_id)
             print("its hour == minute+1 baby")
             if guild is None:
