@@ -89,7 +89,6 @@ class Music(commands.Cog):
                 "in",
                 "default-node",
             )  # Host, Port, Password, Region, Name
-
         lavalink.add_event_hook(self.track_hook)
 
     def cog_unload(self):
