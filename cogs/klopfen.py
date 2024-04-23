@@ -62,7 +62,7 @@ class Klopf(commands.Cog, name="klopf"):
             if user:
                 embed.add_field(
                     name=user.name,
-                    value=f"Correct Times: {stats['correct_times']}, Wrong Times: {stats['wrong_times']}",
+                    value=f"Correct Times: {stats['correct_times']}, Wrong Times: {stats['wrong_times']}, Score: {stats['correct_times'] - 5 * stats['wrong_times']} ",
                     inline=False)
         await context.send(embed=embed)
 
