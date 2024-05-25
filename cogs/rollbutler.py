@@ -1,30 +1,26 @@
-
-import json
-
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 import random
 
 
-
 # Here we name the cog and create a new class for the cog.
-class RollButler(commands.Cog, name="RollButler"):
+class RollButler(commands.Cog, name="rollbutler"):
     def __init__(self, bot) -> None:
         self.bot = bot
 
+    # Here you can just add your own commands, you'll always need to provide "self" as first parameter.
+
     @commands.hybrid_command(
         name="roll",
-        description="This lets you roll a dice"
+        description="This command lets you roll a dice as often as you specify.",
     )
-    async def roll(self, context: Context, dice: str, times = None) -> None:
+    async def roll(self, context: Context, dice: str, *, times: str = "1") -> None:
         """
-        This is the command that rolls a dice you specified the amount of times you specified.
-        :param context: The application command context
-        """
-        if times is None:
-            times = 1
+        This is a testing command that does nothing.
 
+        :param context: The application command context.
+        """
         try:
             dice = int(dice)
             times = int(times)
@@ -50,9 +46,6 @@ class RollButler(commands.Cog, name="RollButler"):
             for i in range(timesInt):
                 embed.description += f"Roll {i + 1}: {random.randint(1, diceInt)}\n"
             await context.send(embed=embed)
-
-
-
 
 
 
