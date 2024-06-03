@@ -1,10 +1,3 @@
-"""
-Copyright © Krypton 2019-2023 - https://github.com/kkrypt0nn (https://krypton.ninja)
-Description:
-🐍 A simple template to start to code your own and personalized discord bot in Python programming language.
-
-Version: 6.1.0
-"""
 import datetime
 import json
 import logging
@@ -317,7 +310,7 @@ class DiscordBot(commands.Bot):
         now = datetime.now()
         guild_id = 746337211074478190
         role_id = 1225212871462355034
-        if now.hour == (now.minute + 1) % 60:
+        if now.hour == (now.minute + 1) % 60 or (now.hour == 23 and now.minute == 59):
             guild = bot.get_guild(guild_id)
             print("its hour == minute+1 baby")
             if guild is None:

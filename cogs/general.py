@@ -30,7 +30,7 @@ class General(commands.Cog, name="general"):
 
     # Message context menu command
     async def remove_spoilers(
-        self, interaction: discord.Interaction, message: discord.Message
+            self, interaction: discord.Interaction, message: discord.Message
     ) -> None:
         """
         Removes the spoilers from the message. This command requires the MESSAGE_CONTENT intent to work properly.
@@ -54,7 +54,7 @@ class General(commands.Cog, name="general"):
 
     # User context menu command
     async def grab_id(
-        self, interaction: discord.Interaction, user: discord.User
+            self, interaction: discord.Interaction, user: discord.User
     ) -> None:
         """
         Grabs the ID of the user.
@@ -166,8 +166,6 @@ class General(commands.Cog, name="general"):
         )
         await context.send(embed=embed)
 
-
-
     @commands.hybrid_command(
         name="8ball",
         description="Ask any question to the bot.",
@@ -209,7 +207,6 @@ class General(commands.Cog, name="general"):
         )
         embed.set_footer(text=f"The question was: {question}")
         await context.send(embed=embed)
-
 
 
 async def setup(bot) -> None:
