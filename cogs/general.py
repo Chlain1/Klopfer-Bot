@@ -80,9 +80,12 @@ class General(commands.Cog, name="general"):
             if i == "owner" and not (await self.bot.is_owner(context.author)):
                 continue
             cog = self.bot.get_cog(i.lower())
-            commands = cog.get_commands()
+            if cog is None:
+                print(f"No cog found with name {i.lower()}")
+                continue
+            bot_commands = cog.get_commands()
             data = []
-            for command in commands:
+            for command in bot_commands:
                 description = command.description.partition("\n")[0]
                 data.append(f"{prefix}{command.name} - {description}")
             help_text = "\n".join(data)

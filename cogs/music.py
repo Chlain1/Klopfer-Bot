@@ -110,7 +110,7 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
             pass
 
 
-class Music(commands.Cog):
+class Music(commands.Cog, name="music"):
     def __init__(self, bot):
         self.bot = bot
         if not hasattr(bot, 'lavalink'):
@@ -426,5 +426,5 @@ class Music(commands.Cog):
         await ctx.send('🔊 | Connected.')
 
 
-async def setup(bot):
+async def setup(bot) -> None:
     await bot.add_cog(Music(bot))
