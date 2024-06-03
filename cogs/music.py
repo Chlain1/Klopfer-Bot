@@ -340,6 +340,47 @@ class Music(commands.Cog):
         await player.skip()
         await ctx.send('⏭ | Skipped.')
 
+    @commands.hybrid_command(
+        name="pause",
+        description="Pauses the current track."
+    )
+    @commands.check(create_player)
+    async def pause(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        # The necessary voice channel checks are handled in "create_player."
+        # We don't need to duplicate code checking them again.
+
+        if not player.is_playing:
+            return await ctx.send('⏸ | I am not playing anything.')
+        else:
+            if player.paused:
+                return await ctx.send('⏸ | I am already paused.')
+            else:
+                # Pause the current track.
+                await player.set_pause(True)
+                await ctx.send('⏸ | Paused.')
+
+
+    @commands.hybrid_command(
+        name="resume",
+        description="Resumes the current track."
+    )
+    @commands.check(create_player)
+    async def resume(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        # The necessary voice channel checks are handled in "create_player."
+        # We don't need to duplicate code checking them again.
+
+        if not player.is_playing:
+            return await ctx.send('▶ | I am not playing anything.')
+        else:
+            if not player.paused:
+                return await ctx.send('▶ | I am not paused.')
+            else:
+                # Resume the current track.
+                await player.set_pause(False)
+                await ctx.send('▶ | Resumed.')
+
 
 async def setup(bot):
     await bot.add_cog(Music(bot))
