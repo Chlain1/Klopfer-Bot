@@ -31,8 +31,9 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
             # We store it in `self.client` so that it may persist across cog reloads,
             # however this is not mandatory.
             self.client.lavalink = lavalink.Client(client.user.id)
-            self.client.lavalink.add_node(host='ether.lunarnodes.xyz', port=6969, password='lunarnodes.xyz',
+            self.client.lavalink.add_node(host='lavalink.rudracloud.com', port=2333, password='RudraCloud.com',
                                           region='de', name='default-node')
+
 
         # Create a shortcut to the Lavalink client here.
         self.lavalink = self.client.lavalink
@@ -112,11 +113,10 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
         if not hasattr(bot, 'lavalink'):
             bot.lavalink = lavalink.Client(bot.user.id)
-            bot.lavalink.add_node(host='localhost', port=2333, password='youshallnotpass',
-                                  region='us', name='default-node')
+            bot.lavalink.add_node(host='lavalink.rudracloud.com', port=2333, password='RudraCloud.com',
+                                  region='de', name='default-node')
 
         self.lavalink: lavalink.Client = bot.lavalink
         self.lavalink.add_event_hooks(self)
@@ -241,7 +241,7 @@ class Music(commands.Cog):
         #   EMPTY    - no results for the query (result.tracks will be empty)
         #   ERROR    - the track encountered an exception during loading
         if results.load_type == LoadType.EMPTY:
-            return await ctx.send("I couldn'\t find any tracks for that query.")
+            return await ctx.send("I couldn't find any tracks for that query.")
         elif results.load_type == LoadType.PLAYLIST:
             tracks = results.tracks
 
