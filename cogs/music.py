@@ -215,10 +215,12 @@ class Music(commands.Cog):
         if guild is not None:
             await guild.voice_client.disconnect(force=True)
 
-    @commands.command(aliases=['p'])
+    @commands.hybrid_command(
+        name="play",
+        description="Searches and plays a song from a given query."
+    )
     @commands.check(create_player)
     async def play(self, ctx, *, query: str):
-        """ Searches and plays a song from a given query. """
         # Get the player for this guild from cache.
         player = self.bot.lavalink.player_manager.get(ctx.guild.id)
         # Remove leading and trailing <>. <> may be used to suppress embedding links in Discord.
@@ -269,10 +271,12 @@ class Music(commands.Cog):
         if not player.is_playing:
             await player.play()
 
-    @commands.command(aliases=['lp'])
+    @commands.hybrid_command(
+        name="lowpass",
+        description = "Sets the strength of the low pass filter."
+    )
     @commands.check(create_player)
     async def lowpass(self, ctx, strength: float):
-        """ Sets the strength of the low pass filter. """
         # Get the player for this guild from cache.
         player = self.bot.lavalink.player_manager.get(ctx.guild.id)
 
@@ -303,10 +307,12 @@ class Music(commands.Cog):
         embed.description = f'Set **Low Pass Filter** strength to {strength}.'
         await ctx.send(embed=embed)
 
-    @commands.command(aliases=['dc'])
+    @commands.hybrid_command(
+        name="disconnect",
+        description="Disconnects the player from the voice channel and clears its queue."
+    )
     @commands.check(create_player)
     async def disconnect(self, ctx):
-        """ Disconnects the player from the voice channel and clears its queue. """
         player = self.bot.lavalink.player_manager.get(ctx.guild.id)
         # The necessary voice channel checks are handled in "create_player."
         # We don't need to duplicate code checking them again.
@@ -319,6 +325,20 @@ class Music(commands.Cog):
         # Disconnect from the voice channel.
         await ctx.voice_client.disconnect(force=True)
         await ctx.send('✳ | Disconnected.')
+
+    @commands.hybrid_command(
+        name="skip",
+        description="Skips the current track."
+    )
+    @commands.check(create_player)
+    async def skip(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        # The necessary voice channel checks are handled in "create_player."
+        # We don't need to duplicate code checking them again.
+
+        # Skip the current track.
+        await player.skip()
+        await ctx.send('⏭ | Skipped.')
 
 
 async def setup(bot):
