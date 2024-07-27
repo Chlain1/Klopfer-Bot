@@ -425,6 +425,41 @@ class Music(commands.Cog, name="music"):
         await ctx.voice_client.connect(cls=LavalinkVoiceClient)
         await ctx.send('🔊 | Connected.')
 
+    @commands.hybrid_command(
+        name="loop",
+        description="Loops the current track."
+    )
+    @commands.check(create_player)
+    async def loop(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        # The necessary voice channel checks are handled in "create_player."
+        # We don't need to duplicate code checking them again.
+
+        if not player.is_playing:
+            return await ctx.send('🔄 | I am not playing anything.')
+        else:
+            if player.loop:
+                # Disable the loop.
+                await player.set_loop(False)
+                await ctx.send('🔄 | Loop disabled.')
+            else:
+                # Loop the current track.
+                await player.set_loop(True)
+                await ctx.send('🔄 | Loop enabled.')
+
+    @commands.hybrid_command(
+        name="loopqueue",
+        description="Loops the current queue."
+    )
+    @commands.check(create_player)
+    async def loopqueue(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not player.queue:
+            return await ctx.send('🔁 | The queue is empty.')
+        else:
+            player.repeat_queue = not player.repeat_queue
+            await ctx.send('🔁 | Queue repeat is now ' + ('enabled' if player.repeat_queue else 'disabled') + '.')
+
 
 async def setup(bot) -> None:
     await bot.add_cog(Music(bot))
