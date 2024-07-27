@@ -438,14 +438,8 @@ class Music(commands.Cog, name="music"):
         if not player.is_playing:
             return await ctx.send('🔄 | I am not playing anything.')
         else:
-            if player.loop:
-                # Disable the loop.
-                await player.set_loop(False)
-                await ctx.send('🔄 | Loop disabled.')
-            else:
-                # Loop the current track.
-                await player.set_loop(True)
-                await ctx.send('🔄 | Loop enabled.')
+            player.repeat = not player.repeat
+            await ctx.send('🔄 | Loop is now ' + ('enabled' if player.repeat else 'disabled') + '.')
 
     @commands.hybrid_command(
         name="loopqueue",
