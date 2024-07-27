@@ -31,7 +31,7 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
             # We store it in `self.client` so that it may persist across cog reloads,
             # however this is not mandatory.
             self.client.lavalink = lavalink.Client(client.user.id)
-            self.client.lavalink.add_node(host='lavalink.rudracloud.com', port=2333, password='RudraCloud.com',
+            self.client.lavalink.add_node(host='localhost', port=2334, password='youshallnotpass',
                                           region='de', name='default-node')
 
 
@@ -115,7 +115,7 @@ class Music(commands.Cog, name="music"):
         self.bot = bot
         if not hasattr(bot, 'lavalink'):
             bot.lavalink = lavalink.Client(bot.user.id)
-            bot.lavalink.add_node(host='lavalink.rudracloud.com', port=2333, password='RudraCloud.com',
+            bot.lavalink.add_node(host='localhost', port=2334, password='youshallnotpass',
                                   region='de', name='default-node')
 
         self.lavalink: lavalink.Client = bot.lavalink
