@@ -332,8 +332,21 @@ class DiscordBot(commands.Bot):
 
 
 
+
 # Run the client with your Discord bot token
 load_dotenv()
 
 bot = DiscordBot()
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if "crazy" in message.content.lower():
+        await message.reply(
+            "Crazy? I Was Crazy Once. They Locked Me In A Room. A Rubber Room. A Rubber Room With Rats. And Rats Make Me Crazy.")
+
+    await bot.process_commands(message)
+
 bot.run(os.getenv("TOKEN"))
