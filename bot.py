@@ -349,4 +349,28 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
+@bot.event
+async def on_member_join(member):
+    guild = member.guild
+    bot.logger.info(f'{member} has joined the server {guild.name}')
+    arrival_channel = guild.system_channel
+    if arrival_channel:
+        await arrival_channel.send(f'{member.mention} ist jetzt ein Ährenmann:in!')
+    else:
+        bot.logger.warning('No system channel found for' + guild.name)
+    if guild.id == 746337211074478190:
+        Mensch_role = discord.utils.get(guild.roles, id=746355774409670657)
+        await member.add_roles(Mensch_role)
+        bot.logger.info(f"{member} has been given the role {Mensch_role}")
+
+@bot.event
+async def on_member_remove(member):
+    guild = member.guild
+    bot.logger.info(f'{member.name} has left the server {guild.name}')
+    arrival_channel = guild.system_channel
+    if arrival_channel:
+        await arrival_channel.send(f'{member.name} hat einfach keine Ähre!')
+    else:
+        bot.logger.warning('No system channel found for ' + guild.name)
+
 bot.run(os.getenv("TOKEN"))
