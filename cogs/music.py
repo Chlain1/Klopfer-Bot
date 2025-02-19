@@ -455,5 +455,18 @@ class Music(commands.Cog, name="music"):
             await ctx.send('🔁 | Queue repeat is now ' + ('enabled' if player.repeat_queue else 'disabled') + '.')
 
 
+    '''
+    from this point onwards are custom DnD playlist commands that I have added for a curse of strahd campaign
+    '''
+    @commands.hybrid_command(
+        name='horror',
+        description='Plays a horror themed playlist.'
+    )
+    @commands.check(create_player)
+    async def horror(self, ctx):
+        await ctx.invoke(self.clear)
+        horrorPlaylist: str ="https://on.soundcloud.com/iVhBF7R2ZucSGeG59"
+        await ctx.invoke(self.play, query=horrorPlaylist)
+
 async def setup(bot) -> None:
     await bot.add_cog(Music(bot))
