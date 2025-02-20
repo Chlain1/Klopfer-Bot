@@ -8,6 +8,7 @@ from lavalink.events import TrackStartEvent, QueueEndEvent
 from lavalink.errors import ClientError
 from lavalink.filters import LowPass
 from lavalink.server import LoadType
+import random
 
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
@@ -454,6 +455,18 @@ class Music(commands.Cog, name="music"):
             player.repeat_queue = not player.repeat_queue
             await ctx.send('🔁 | Queue repeat is now ' + ('enabled' if player.repeat_queue else 'disabled') + '.')
 
+    @commands.hybrid_command(
+        name="shuffle",
+        description="Shuffles the current queue."
+    )
+    @commands.check(create_player)
+    async def shuffle(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not player.queue:
+            return await ctx.send('🔀 | The queue is empty.')
+        else:
+            random.shuffle(player.queue)
+            await ctx.send('🔀 | Queue shuffled.')
 
     '''
     from this point onwards are custom DnD playlist commands that I have added for a curse of strahd campaign
