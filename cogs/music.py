@@ -472,6 +472,7 @@ class Music(commands.Cog, name="music"):
             await ctx.invoke(self.clear)
         horrorPlaylist = "https://on.soundcloud.com/iVhBF7R2ZucSGeG59"
         await self.play(ctx, query=horrorPlaylist)
+        await self.skip(ctx)
 
 async def setup(bot) -> None:
     await bot.add_cog(Music(bot))
