@@ -465,6 +465,8 @@ class Music(commands.Cog, name="music"):
     @commands.check(create_player)
     async def horror(self, ctx):
         player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
         if player.queue:
             await ctx.invoke(self.clear)
         horrorPlaylist: str ="https://on.soundcloud.com/iVhBF7R2ZucSGeG59"
