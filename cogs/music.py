@@ -157,7 +157,7 @@ class Music(commands.Cog, name="music"):
 
         # These are commands that require the bot to join a voicechannel (i.e. initiating playback).
         # Commands such as volume/skip etc don't require the bot to be in a voicechannel so don't need listing here.
-        should_connect = ctx.command.name in ('play',)
+        should_connect = ctx.command.name in ('play', 'horror')
 
         voice_client = ctx.voice_client
 
