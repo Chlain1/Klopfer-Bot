@@ -458,6 +458,7 @@ class Music(commands.Cog, name="music"):
     '''
     from this point onwards are custom DnD playlist commands that I have added for a curse of strahd campaign
     '''
+
     @commands.hybrid_command(
         name='horror',
         description='Plays a horror themed playlist.'
@@ -469,8 +470,8 @@ class Music(commands.Cog, name="music"):
             await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
         if player.queue:
             await ctx.invoke(self.clear)
-        horrorPlaylist: str ="https://on.soundcloud.com/iVhBF7R2ZucSGeG59"
-        await ctx.invoke(self.play, query=horrorPlaylist)
+        horrorPlaylist = "https://on.soundcloud.com/iVhBF7R2ZucSGeG59"
+        await self.play(ctx, query=horrorPlaylist)
 
 async def setup(bot) -> None:
     await bot.add_cog(Music(bot))
