@@ -158,7 +158,7 @@ class Music(commands.Cog, name="music"):
 
         # These are commands that require the bot to join a voicechannel (i.e. initiating playback).
         # Commands such as volume/skip etc don't require the bot to be in a voicechannel so don't need listing here.
-        should_connect = ctx.command.name in ('play', 'horror')
+        should_connect = ctx.command.name in ('play', 'horror', 'fight', 'travel', 'tavern')
 
         voice_client = ctx.voice_client
 
@@ -492,7 +492,7 @@ class Music(commands.Cog, name="music"):
 
     @commands.hybrid_command(
         name='fight',
-        description='Plays a horror themed playlist.'
+        description='Plays a fight themed playlist.'
     )
     @commands.check(create_player)
     async def fight(self, ctx):
@@ -507,7 +507,7 @@ class Music(commands.Cog, name="music"):
 
     @commands.hybrid_command(
         name='travel',
-        description='Plays a horror themed playlist.'
+        description='Plays a travel themed playlist.'
     )
     @commands.check(create_player)
     async def travel(self, ctx):
@@ -521,11 +521,11 @@ class Music(commands.Cog, name="music"):
         await self.skip(ctx)
 
     @commands.hybrid_command(
-        name='horror',
-        description='Plays a horror themed playlist.'
+        name='tavern',
+        description='Plays a tavern themed playlist.'
     )
     @commands.check(create_player)
-    async def horror(self, ctx):
+    async def tavern(self, ctx):
         player = self.bot.lavalink.player_manager.get(ctx.guild.id)
         if not ctx.voice_client:
             await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
