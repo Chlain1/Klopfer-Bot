@@ -483,8 +483,56 @@ class Music(commands.Cog, name="music"):
             await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
         if player.queue:
             await ctx.invoke(self.clear)
-        horrorPlaylist = "https://on.soundcloud.com/iVhBF7R2ZucSGeG59"
-        await self.play(ctx, query=horrorPlaylist)
+        await self.play(ctx, query="https://on.soundcloud.com/iVhBF7R2ZucSGeG59")
+        await self.play(ctx, query="https://on.soundcloud.com/nWBTwdNGhyZpjKxt7")
+        await self.play(ctx, query="https://on.soundcloud.com/e6VZuGe2NPsRSfgH7")
+        await self.play(ctx, query="https://on.soundcloud.com/nan8sHRxuqJ6jHT29")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
+
+    @commands.hybrid_command(
+        name='fight',
+        description='Plays a horror themed playlist.'
+    )
+    @commands.check(create_player)
+    async def fight(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/NPPDVPGDFMP8snkXA")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
+
+    @commands.hybrid_command(
+        name='travel',
+        description='Plays a horror themed playlist.'
+    )
+    @commands.check(create_player)
+    async def travel(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/96hDKXQgDRkowF4z6")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
+
+    @commands.hybrid_command(
+        name='horror',
+        description='Plays a horror themed playlist.'
+    )
+    @commands.check(create_player)
+    async def horror(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/qgSEe2MapiDpdoBH6")
+        await self.play(ctx, query="https://on.soundcloud.com/oCJu1EhocxQ43Fqz9")
         await self.shuffle(ctx)
         await self.skip(ctx)
 
