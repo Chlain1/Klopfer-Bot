@@ -8,6 +8,7 @@ from lavalink.events import TrackStartEvent, QueueEndEvent
 from lavalink.errors import ClientError
 from lavalink.filters import LowPass
 from lavalink.server import LoadType
+import random
 
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
@@ -157,7 +158,7 @@ class Music(commands.Cog, name="music"):
 
         # These are commands that require the bot to join a voicechannel (i.e. initiating playback).
         # Commands such as volume/skip etc don't require the bot to be in a voicechannel so don't need listing here.
-        should_connect = ctx.command.name in ('play',)
+        should_connect = ctx.command.name in ('play', 'horror', 'fight', 'travel', 'tavern')
 
         voice_client = ctx.voice_client
 
@@ -454,6 +455,86 @@ class Music(commands.Cog, name="music"):
             player.repeat_queue = not player.repeat_queue
             await ctx.send('🔁 | Queue repeat is now ' + ('enabled' if player.repeat_queue else 'disabled') + '.')
 
+    @commands.hybrid_command(
+        name="shuffle",
+        description="Shuffles the current queue."
+    )
+    @commands.check(create_player)
+    async def shuffle(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not player.queue:
+            return await ctx.send('🔀 | The queue is empty.')
+        else:
+            random.shuffle(player.queue)
+            await ctx.send('🔀 | Queue shuffled.')
+
+    '''
+    from this point onwards are custom DnD playlist commands that I have added for a curse of strahd campaign
+    '''
+
+    @commands.hybrid_command(
+        name='horror',
+        description='Plays a horror themed playlist.'
+    )
+    @commands.check(create_player)
+    async def horror(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/iVhBF7R2ZucSGeG59")
+        await self.play(ctx, query="https://on.soundcloud.com/nWBTwdNGhyZpjKxt7")
+        await self.play(ctx, query="https://on.soundcloud.com/e6VZuGe2NPsRSfgH7")
+        await self.play(ctx, query="https://on.soundcloud.com/nan8sHRxuqJ6jHT29")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
+
+    @commands.hybrid_command(
+        name='fight',
+        description='Plays a fight themed playlist.'
+    )
+    @commands.check(create_player)
+    async def fight(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/NPPDVPGDFMP8snkXA")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
+
+    @commands.hybrid_command(
+        name='travel',
+        description='Plays a travel themed playlist.'
+    )
+    @commands.check(create_player)
+    async def travel(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/96hDKXQgDRkowF4z6")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
+
+    @commands.hybrid_command(
+        name='tavern',
+        description='Plays a tavern themed playlist.'
+    )
+    @commands.check(create_player)
+    async def tavern(self, ctx):
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        if not ctx.voice_client:
+            await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+        if player.queue:
+            await ctx.invoke(self.clear)
+        await self.play(ctx, query="https://on.soundcloud.com/qgSEe2MapiDpdoBH6")
+        await self.play(ctx, query="https://on.soundcloud.com/oCJu1EhocxQ43Fqz9")
+        await self.shuffle(ctx)
+        await self.skip(ctx)
 
 async def setup(bot) -> None:
     await bot.add_cog(Music(bot))
