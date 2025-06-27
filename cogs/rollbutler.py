@@ -4,6 +4,77 @@ from discord.ext.commands import Context
 import random
 
 
+class RollModal(discord.ui.Modal):
+    def __init__(self, dice_sides: int):
+        super().__init__(title=f"Roll D{dice_sides}")
+        self.dice_sides = dice_sides
+        
+        self.rolls_input = discord.ui.TextInput(
+            label="Number of rolls",
+            placeholder="Enter number of rolls (1-100)",
+            default="1",
+            min_length=1,
+            max_length=3
+        )
+        self.add_item(self.rolls_input)
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            times = int(self.rolls_input.value)
+        except ValueError:
+            await interaction.response.send_message("Please enter a valid number.", ephemeral=True)
+            return
+        
+        if times > 100 or times < 1:
+            await interaction.response.send_message("You can only roll between 1 and 100 times.", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title=f"Rolling a D{self.dice_sides} {times} time{'s' if times != 1 else ''}",
+            colour=0xFC0FC0,
+            description=""
+        )
+        
+        sum = 0
+        for i in range(times):
+            roll_result = random.randint(1, self.dice_sides)
+            embed.description += f"Roll {i + 1}: {roll_result}\n"
+            sum += roll_result
+        embed.description += f"Sum of the rolls: {sum}\n"
+        
+        await interaction.response.send_message(embed=embed)
+
+
+class DiceSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="D4", description="4-sided dice", value="4"),
+            discord.SelectOption(label="D6", description="6-sided dice", value="6"),
+            discord.SelectOption(label="D8", description="8-sided dice", value="8"),
+            discord.SelectOption(label="D10", description="10-sided dice", value="10"),
+            discord.SelectOption(label="D12", description="12-sided dice", value="12"),
+            discord.SelectOption(label="D20", description="20-sided dice", value="20"),
+            discord.SelectOption(label="D100", description="100-sided dice", value="100"),
+        ]
+        
+        super().__init__(placeholder="Choose a dice type...", min_values=1, max_values=1, options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        dice_sides = int(self.values[0])
+        modal = RollModal(dice_sides)
+        await interaction.response.send_modal(modal)
+
+
+class DiceView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=300)
+        self.add_item(DiceSelect())
+    
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
 # Here we name the cog and create a new class for the cog.
 class RollButler(commands.Cog, name="rollbutler"):
     def __init__(self, bot) -> None:
@@ -15,37 +86,20 @@ class RollButler(commands.Cog, name="rollbutler"):
         name="roll",
         description="This command lets you roll a dice as often as you specify.",
     )
-    async def roll(self, context: Context, dice: str, *, times: str = "1") -> None:
+    async def roll(self, context: Context) -> None:
         """
-        This is a testing command that does nothing.
+        Roll dice using a dropdown menu to select dice type and a modal for number of rolls.
 
         :param context: The application command context.
         """
-        try:
-            dice = int(dice)
-            times = int(times)
-        except ValueError:
-            await context.send("Please enter valid numbers.")
-            return
-
-        diceInt = int(dice)
-        timesInt = int(times)
-
         embed = discord.Embed(
-            title=f"Rolling a D{diceInt} {timesInt} times.",
-            colour=0xFC0FC0,
-            description=""
+            title="🎲 Dice Roller",
+            description="Select a dice type from the dropdown below to get started!",
+            colour=0xFC0FC0
         )
-
-        if timesInt > 100 or timesInt < 1:
-            await context.send("You can't roll the dice more than 100 times.")
-        elif diceInt > 100 or diceInt < 1:
-            await context.send(f"Why would you want a dice with {diceInt} sides?")
-        else:
-            await context.send(f"Rolling a {diceInt} sided dice...")
-            for i in range(timesInt):
-                embed.description += f"Roll {i + 1}: {random.randint(1, diceInt)}\n"
-            await context.send(embed=embed)
+        
+        view = DiceView()
+        await context.send(embed=embed, view=view)
 
 
 
