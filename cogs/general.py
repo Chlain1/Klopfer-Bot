@@ -211,6 +211,8 @@ class General(commands.Cog, name="general"):
         embed.set_footer(text=f"The question was: {question}")
         await context.send(embed=embed)
 
+        
+
 
 async def setup(bot) -> None:
     await bot.add_cog(General(bot))
