@@ -48,16 +48,49 @@ class Selfroles(commands.Cog, name="selfRoles"):
                 )
         await context.send(embed=embed)
 
-    @command.hybrid_command(
+    @commands.hybrid_command(
         name="add_role",
         description="This adds a role that can be selected"
     )
     async def add_roles(self, context: Context, role: discord.role=None):
         if role is None:
-            print(TODO)
-            #TODO Role stuff
+            embed = discord.Embed(
+                title="Role Selector",
+                description="Select the roles that should be Self-Roles",
+                color=0xFF00DC
+            )
+
+            view = RoleView
+            await context.send(embed=embed, view=view)
         else:
             self.update_roles(str(role.id), str(context.guild.id))
+
+class RoleView(discord.ui.View):
+    def __init__(self, ctx: Context, options: list[discord.SelectOption]):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.add_item(RoleSelect(ctx, options))
+    async def on_timeout(self):
+        for item in self.children:
+            item.disable = True
+
+
+class RoleSelect(discord.ui.Select):
+    def __init__(self, ctx: Context, options: list[discord.SelectOption]):
+        options = []
+        for role in ctx.guild.roles:
+            options.append(discord.SelectOption(label=role.name, value=str(role.id)))
+        super().__init__(
+            placeholder="Choose another Role for Self Roles",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+        self.ctx = ctx
+    
+    async def callback(self, interaction: discord.Interaction):
+        print(TODO)
+        # TODO do it
 
 async def setup(bot) -> None:
     await bot.add_cog(Selfroles(bot))
