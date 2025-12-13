@@ -1,4 +1,5 @@
 import json
+import os
 
 import discord
 from discord.ext import commands
@@ -6,12 +7,14 @@ from discord.ext.commands import Context
 from datetime import datetime
 
 
-LEADERBOARD_FILE = 'leaderboard.json'
+LEADERBOARD_FILE = os.getenv('LEADERBOARD_PATH', 'leaderboard/leaderboard.json')
 
 # Here we name the cog and create a new class for the cog.
 class Klopf(commands.Cog, name="klopf"):
     def __init__(self, bot) -> None:
         self.bot = bot
+        # Ensure leaderboard directory exists
+        os.makedirs(os.path.dirname(LEADERBOARD_FILE), exist_ok=True)
         try:
             with open(LEADERBOARD_FILE, 'r') as file:
                 self.leaderboard = json.load(file)

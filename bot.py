@@ -143,14 +143,17 @@ class DiscordBot(commands.Bot):
         self.database = None
 
     async def init_db(self) -> None:
-        async with aiosqlite.connect(
-            f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
-        ) as db:
-            with open(
-                f"{os.path.realpath(os.path.dirname(__file__))}/database/schema.sql"
-            ) as file:
-                await db.executescript(file.read())
-            await db.commit()
+        try:
+            async with aiosqlite.connect(
+                f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
+            ) as db:
+                with open(
+                    f"{os.path.realpath(os.path.dirname(__file__))}/database/schema.sql"
+                ) as file:
+                    await db.executescript(file.read())
+                await db.commit()
+        except Exception as e:
+            self.logger.warning(f"Database initialization failed: {e}. Running without database persistence.")
 
     async def load_cogs(self) -> None:
         """
@@ -197,11 +200,14 @@ class DiscordBot(commands.Bot):
         await self.init_db()
         await self.load_cogs()
         self.status_task.start()
-        self.database = DatabaseManager(
-            connection=await aiosqlite.connect(
-                f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
+        try:
+            self.database = DatabaseManager(
+                connection=await aiosqlite.connect(
+                    f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
+                )
             )
-        )
+        except Exception as e:
+            self.logger.warning(f"Database connection failed: {e}. Moderation features disabled.")
         await self.did_you_klopf()
         self.check_time.start()
 

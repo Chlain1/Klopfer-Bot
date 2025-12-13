@@ -32,11 +32,14 @@ services:
       - LAVALINK_PASSWORD=youshallnotpass
     volumes:
       - bot-database:/app/database
+      - bot-leaderboard:/app/leaderboard
     networks:
       - klopfer-network
 
 volumes:
   bot-database:
+    driver: local
+  bot-leaderboard:
     driver: local
 
 networks:
