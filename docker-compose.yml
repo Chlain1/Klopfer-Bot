@@ -18,11 +18,8 @@ services:
       - klopfer-network
 
   bot:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    image: klopfer-bot:latest
-    pull_policy: build
+    build: .
+    image: localhost/klopfer-bot:latest
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
