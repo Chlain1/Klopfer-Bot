@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   lavalink:
     image: fredboat/lavalink:latest
@@ -6,7 +8,7 @@ services:
     environment:
       - _JAVA_OPTIONS=-Xmx2G
       - SERVER_PORT=2333
-      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     volumes:
       - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
       - ./lavalink/plugins:/opt/Lavalink/plugins
@@ -16,14 +18,17 @@ services:
     networks:
       - klopfer-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "-H", "Authorization: youshallnotpass", "http://localhost:2333/version"]
+      test: ["CMD-SHELL", "curl -f http://localhost:2333/version || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
   bot:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: klopfer-bot:latest
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
@@ -33,12 +38,19 @@ services:
       - TOKEN=${TOKEN}
       - LAVALINK_HOST=lavalink
       - LAVALINK_PORT=2333
-      - LAVALINK_PASSWORD=youshallnotpass
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     volumes:
       - ./database:/app/database
-      - ./config.json:/app/config.json:ro
+      # config.json wird im Image mitgebuildet, kein Mount nötig
+      # Falls du die config ändern willst, baue das Image neu
     networks:
       - klopfer-network
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f bot.py || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 networks:
   klopfer-network:
