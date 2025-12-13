@@ -95,3 +95,6 @@ class DatabaseManager:
             for row in result:
                 result_list.append(row)
             return result_list
+
+
+__all__ = ["DatabaseManager"]
