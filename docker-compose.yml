@@ -18,7 +18,9 @@ services:
       - klopfer-network
 
   bot:
-    build: .
+    build:
+      context: .
+      no_cache: true
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
