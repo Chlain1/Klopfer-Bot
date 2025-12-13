@@ -4,11 +4,11 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for audio playback
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install system dependencies for audio playback (optional, ignore errors)
+RUN apt-get update || true && \
+    apt-get install -y --no-install-recommends ffmpeg || true && \
+    apt-get clean || true && \
+    rm -rf /var/lib/apt/lists/* || true
 
 # Copy requirements file
 COPY requirements.txt .
