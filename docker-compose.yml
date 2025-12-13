@@ -31,7 +31,7 @@ services:
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=youshallnotpass
     volumes:
-      - ./database:/app/database
+      - ./database/database.db:/app/database/database.db
     networks:
       - klopfer-network
 
