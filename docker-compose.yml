@@ -2,27 +2,20 @@ version: '3.8'
 
 services:
   lavalink:
-    image: fredboat/lavalink:latest
+    image: ghcr.io/lavalink-devs/lavalink:4
     container_name: klopfer-lavalink
     restart: unless-stopped
     environment:
       - _JAVA_OPTIONS=-Xmx2G
       - SERVER_PORT=2333
-      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-    volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
-      - ./lavalink/plugins:/opt/Lavalink/plugins
-      - ./lavalink/logs:/opt/Lavalink/logs
+      - SERVER_ADDRESS=0.0.0.0
+      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      - LAVALINK_SERVER_SOURCES_YOUTUBE=true
+      - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
     ports:
       - "2333:2333"
     networks:
       - klopfer-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:2333/version || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   bot:
     build: 
@@ -32,25 +25,16 @@ services:
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
-      lavalink:
-        condition: service_healthy
+      - lavalink
     environment:
       - TOKEN=${TOKEN}
       - LAVALINK_HOST=lavalink
       - LAVALINK_PORT=2333
-      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      - LAVALINK_PASSWORD=youshallnotpass
     volumes:
       - ./database:/app/database
-      # config.json wird im Image mitgebuildet, kein Mount nötig
-      # Falls du die config ändern willst, baue das Image neu
     networks:
       - klopfer-network
-    healthcheck:
-      test: ["CMD-SHELL", "pgrep -f bot.py || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
 
 networks:
   klopfer-network:
