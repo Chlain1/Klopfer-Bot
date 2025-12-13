@@ -16,6 +16,9 @@ from dotenv import load_dotenv
 
 from database import DatabaseManager
 
+# Load environment variables from .env file
+load_dotenv()
+
 if not os.path.isfile(f"{os.path.realpath(os.path.dirname(__file__))}/config.json"):
     sys.exit("'config.json' not found! Please add it and try again.")
 else:
