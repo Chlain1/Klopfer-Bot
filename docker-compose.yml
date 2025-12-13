@@ -31,9 +31,13 @@ services:
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=youshallnotpass
     volumes:
-      - ./database/database.db:/app/database/database.db
+      - bot-database:/app/database
     networks:
       - klopfer-network
+
+volumes:
+  bot-database:
+    driver: local
 
 networks:
   klopfer-network:
