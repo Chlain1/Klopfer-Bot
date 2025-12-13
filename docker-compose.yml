@@ -19,7 +19,6 @@ services:
 
   bot:
     build: .
-    image: localhost/klopfer-bot:latesthttps://github.com/Chlain1/Klopfer-Bot
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
