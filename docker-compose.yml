@@ -22,6 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: klopfer-bot:latest
+    pull_policy: build
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
