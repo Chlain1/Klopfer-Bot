@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: klopfer-lavalink
+    restart: unless-stopped
+    environment:
+      - _JAVA_OPTIONS=-Xmx2G
+      - SERVER_PORT=2333
+      - SERVER_ADDRESS=0.0.0.0
+      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      - LAVALINK_SERVER_SOURCES_YOUTUBE=true
+      - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
+    ports:
+      - "2333:2333"
+    networks:
+      - klopfer-network
+
+  bot:
+    build:
+      context: .
+      no_cache: true
+    container_name: klopfer-bot
+    restart: unless-stopped
+    depends_on:
+      - lavalink
+    environment:
+      - TOKEN=${TOKEN}
+      - LAVALINK_HOST=lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=youshallnotpass
+    volumes:
+      - bot-database:/app/database
+      - bot-leaderboard:/app/leaderboard
+    networks:
+      - klopfer-network
+
+volumes:
+  bot-database:
+    driver: local
+  bot-leaderboard:
+    driver: local
+
+networks:
+  klopfer-network:
+    driver: bridge

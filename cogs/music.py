@@ -1,5 +1,5 @@
-
 import re
+import os
 
 import discord
 import lavalink
@@ -32,7 +32,11 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
             # We store it in `self.client` so that it may persist across cog reloads,
             # however this is not mandatory.
             self.client.lavalink = lavalink.Client(client.user.id)
-            self.client.lavalink.add_node(host='localhost', port=2334, password='youshallnotpass',
+            # Use environment variables for Docker deployment, fallback to localhost for local development
+            lavalink_host = os.getenv('LAVALINK_HOST', 'localhost')
+            lavalink_port = int(os.getenv('LAVALINK_PORT', '2333'))
+            lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
+            self.client.lavalink.add_node(host=lavalink_host, port=lavalink_port, password=lavalink_password,
                                           region='de', name='default-node')
 
 

@@ -1,11 +1,5 @@
-""""
-Copyright © Krypton 2019-2023 - https://github.com/kkrypt0nn (https://krypton.ninja)
-Description:
-🐍 A simple template to start to code your own and personalized discord bot in Python programming language.
-
-Version: 6.1.0
-"""
 import json
+import os
 
 import discord
 from discord.ext import commands
@@ -13,12 +7,14 @@ from discord.ext.commands import Context
 from datetime import datetime
 
 
-LEADERBOARD_FILE = 'leaderboard.json'
+LEADERBOARD_FILE = os.getenv('LEADERBOARD_PATH', 'leaderboard/leaderboard.json')
 
 # Here we name the cog and create a new class for the cog.
 class Klopf(commands.Cog, name="klopf"):
     def __init__(self, bot) -> None:
         self.bot = bot
+        # Ensure leaderboard directory exists
+        os.makedirs(os.path.dirname(LEADERBOARD_FILE), exist_ok=True)
         try:
             with open(LEADERBOARD_FILE, 'r') as file:
                 self.leaderboard = json.load(file)

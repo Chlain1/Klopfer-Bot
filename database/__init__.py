@@ -1,12 +1,3 @@
-""""
-Copyright © Krypton 2019-2023 - https://github.com/kkrypt0nn (https://krypton.ninja)
-Description:
-🐍 A simple template to start to code your own and personalized discord bot in Python programming language.
-
-Version: 6.1.0
-"""
-
-
 import aiosqlite
 
 
@@ -95,3 +86,6 @@ class DatabaseManager:
             for row in result:
                 result_list.append(row)
             return result_list
+
+
+__all__ = ["DatabaseManager"]
