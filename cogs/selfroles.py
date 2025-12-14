@@ -6,10 +6,9 @@ from discord.ext.commands import Context
 ROLES_TO_SELECT = "self_roles.json"
 
 
-class Selfroles(commands.Cog, name="selfRoles"):
-    def __init__(self, bot, config=None):
+class Selfroles(commands.Cog, name="selfroles"):
+    def __init__(self, bot):
         self.bot = bot
-        self.config = config
         try:
             with open(ROLES_TO_SELECT, "r") as file:
                 data = json.load(file)
@@ -78,20 +77,48 @@ class Selfroles(commands.Cog, name="selfRoles"):
             description="Select the roles that should be Self-Roles",
             colour=0xFF00DC,
         )
-        view = RoleView(context, self)
+        view = RoleView(context, self, mode="admin")
         if not view.select.options:
             return await context.send(
                 "No assignable roles found (excludes @everyone, managed roles, and roles above my top role)."
             )
         await context.send(embed=embed, view=view)
 
+    @commands.hybrid_command(
+        name="get_role",
+        description="Opens a dropdown to pick the roles you can assign yourself",
+    )
+    @commands.bot_has_guild_permissions(manage_roles=True)
+    async def get_role(self, context: Context):
+        if not context.guild:
+            return await context.send("Use this in a server.")
+        
+        gid = str(context.guild.id)
+        role_ids = self.roles.get(gid, [])
+        
+        if not role_ids:
+            return await context.send("No self-assignable roles configured yet.")
+        
+        embed = discord.Embed(
+            title="Self Role Selection",
+            description="Choose which roles you want to assign/remove from yourself",
+            colour=0xFF00DC,
+        )
+        view = RoleView(context, self, mode="user")
+        
+        if not view.select.options:
+            return await context.send("No valid self-assignable roles found.")
+        
+        await context.send(embed=embed, view=view)
+
 
 class RoleView(discord.ui.View):
-    def __init__(self, ctx: Context, cog: Selfroles):
+    def __init__(self, ctx: Context, cog: Selfroles, mode: str = "admin"):
         super().__init__(timeout=300)
         self.ctx = ctx
         self.cog = cog
-        self.select = RoleSelect(ctx, cog)
+        self.mode = mode
+        self.select = RoleSelect(ctx, cog, mode)
         self.add_item(self.select)
 
     async def on_timeout(self):
@@ -100,57 +127,113 @@ class RoleView(discord.ui.View):
 
 
 class RoleSelect(discord.ui.Select):
-    def __init__(self, ctx: Context, cog: Selfroles):
+    def __init__(self, ctx: Context, cog: Selfroles, mode: str = "admin"):
         self.ctx = ctx
         self.cog = cog
+        self.mode = mode
 
         guild = ctx.guild
-        me = guild.me
-
-        # Exclude @everyone, managed roles, and roles >= bot's top role
-        roles = [
-            r for r in guild.roles
-            if r != guild.default_role and not r.managed and (r < me.top_role)
-        ]
-        # Sort top to bottom, cap at 25 options (Discord limit)
-        roles = sorted(roles, key=lambda r: r.position, reverse=True)[:25]
-
-        options = [
-            discord.SelectOption(label=r.name[:100], value=str(r.id))
-            for r in roles
-        ]
+        
+        if mode == "admin":
+            # Admin mode: show all assignable roles from guild
+            me = guild.me
+            roles = [
+                r for r in guild.roles
+                if r != guild.default_role and not r.managed and (r < me.top_role)
+            ]
+            roles = sorted(roles, key=lambda r: r.position, reverse=True)[:25]
+            options = [
+                discord.SelectOption(label=r.name[:100], value=str(r.id))
+                for r in roles
+            ]
+            placeholder = "Choose role(s) for Self Roles"
+        else:
+            # User mode: show only self-assignable roles from config
+            gid = str(guild.id)
+            role_ids = cog.roles.get(gid, [])
+            options = []
+            for role_id in role_ids:
+                role = guild.get_role(int(role_id))
+                if role:
+                    options.append(
+                        discord.SelectOption(
+                            label=role.name[:100],
+                            value=str(role.id),
+                            description=f"Toggle {role.name}"
+                        )
+                    )
+            options = options[:25]
+            placeholder = "Choose role(s) to toggle"
 
         super().__init__(
-            placeholder="Choose role(s) for Self Roles",
+            placeholder=placeholder,
             min_values=1 if options else 0,
             max_values=min(len(options), 25) if options else 1,
             options=options,
         )
 
     async def callback(self, interaction: discord.Interaction):
-        # Restrict to the command invoker
-        if interaction.user.id != self.ctx.author.id:
-            return await interaction.response.send_message("Not your menu.", ephemeral=True)
+        if self.mode == "admin":
+            # Admin mode: add roles to config
+            if interaction.user.id != self.ctx.author.id:
+                return await interaction.response.send_message("Not your menu.", ephemeral=True)
 
-        gid = str(interaction.guild.id)
-        self.cog._ensure_guild(interaction.guild.id)
+            gid = str(interaction.guild.id)
+            self.cog._ensure_guild(interaction.guild.id)
 
-        existing = set(self.cog.roles.get(gid, []))
-        selected = set(self.values)
-        updated = list(existing | selected)
-        self.cog.roles[gid] = updated
-        await self.cog.save_roles()
+            existing = set(self.cog.roles.get(gid, []))
+            selected = set(self.values)
+            updated = list(existing | selected)
+            self.cog.roles[gid] = updated
+            await self.cog.save_roles()
 
-        names = []
-        for rid in selected:
-            r = interaction.guild.get_role(int(rid))
-            if r:
-                names.append(r.name)
+            names = []
+            for rid in selected:
+                r = interaction.guild.get_role(int(rid))
+                if r:
+                    names.append(r.name)
 
-        await interaction.response.send_message(
-            f"Added as self-assignable: {', '.join(names)}" if names else "Updated.",
-            ephemeral=True,
-        )
+            await interaction.response.send_message(
+                f"Added as self-assignable: {', '.join(names)}" if names else "Updated.",
+                ephemeral=True,
+            )
+        else:
+            # User mode: toggle roles on member
+            member = interaction.guild.get_member(interaction.user.id)
+            if not member:
+                return await interaction.response.send_message(
+                    "Could not find you in this server.", ephemeral=True
+                )
+
+            added = []
+            removed = []
+            
+            for role_id in self.values:
+                role = interaction.guild.get_role(int(role_id))
+                if not role:
+                    continue
+                
+                if role in member.roles:
+                    try:
+                        await member.remove_roles(role)
+                        removed.append(role.name)
+                    except discord.Forbidden:
+                        pass
+                else:
+                    try:
+                        await member.add_roles(role)
+                        added.append(role.name)
+                    except discord.Forbidden:
+                        pass
+
+            response_parts = []
+            if added:
+                response_parts.append(f"✅ Added: {', '.join(added)}")
+            if removed:
+                response_parts.append(f"❌ Removed: {', '.join(removed)}")
+            
+            message = "\n".join(response_parts) if response_parts else "No changes made."
+            await interaction.response.send_message(message, ephemeral=True)
 
 
 async def setup(bot) -> None:
