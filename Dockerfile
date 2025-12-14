@@ -25,5 +25,5 @@ RUN useradd -m -u 1000 botuser && \
 
 USER botuser
 
-# Run the bot
-CMD ["python", "bot.py"]
+# Run the bot with a delay to let Lavalink start
+CMD ["sh", "-c", "sleep 15 && python bot.py"]

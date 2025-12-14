@@ -16,12 +16,6 @@ services:
       - "2333:2333"
     networks:
       - klopfer-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:2333/version || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
 
   bot:
     build:
@@ -30,8 +24,7 @@ services:
     container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
-      lavalink:
-        condition: service_healthy
+      - lavalink
     environment:
       - TOKEN=${TOKEN}
       - LAVALINK_HOST=lavalink
