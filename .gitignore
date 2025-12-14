@@ -9,6 +9,9 @@ __pycache__/
 #Leaderboard.json
 leaderboard.json
 
+# self_roles.json
+self_roles.json
+
 # Distribution / packaging
 .Python
 build/
