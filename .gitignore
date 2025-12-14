@@ -12,6 +12,9 @@ leaderboard.json
 # self_roles.json
 self_roles.json
 
+# youtube_subscriptions.json
+youtube_subscriptions.json
+
 # Distribution / packaging
 .Python
 build/
