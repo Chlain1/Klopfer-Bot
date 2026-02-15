@@ -382,4 +382,5 @@ async def on_member_remove(member):
     else:
         bot.logger.warning('No system channel found for ' + guild.name)
 
-bot.run(os.getenv("TOKEN"))
+if __name__ == "__main__":
+    bot.run(os.getenv("TOKEN"))

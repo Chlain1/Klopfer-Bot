@@ -1,5 +1,7 @@
 # Python Klopfer Bot
 
+[![Coverage](https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg)](https://codecov.io/gh/Chlain1/Klopfer-Bot)
+
 ## Support
 
 Before requesting support, you should know that this template requires you to have at least a **basic knowledge** of
