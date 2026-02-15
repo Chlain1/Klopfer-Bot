@@ -1,5 +1,5 @@
 # Python Klopfer Bot
-
+Test Coverage:
 [![Coverage](https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg)](https://codecov.io/gh/Chlain1/Klopfer-Bot)
 
 ## Disclaimer
