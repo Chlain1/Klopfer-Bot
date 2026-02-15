@@ -2,14 +2,6 @@
 
 [![Coverage](https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg)](https://codecov.io/gh/Chlain1/Klopfer-Bot)
 
-## Support
-
-Before requesting support, you should know that this template requires you to have at least a **basic knowledge** of
-Python and the library is made for **advanced users**. Do not use this template if you don't know the
-basics or some advanced topics such as OOP or async. [Here's](https://pythondiscord.com/pages/resources) a link for resources to learn python.
-
-All the updates of the template are available [here](UPDATES.md).
-
 ## Disclaimer
 
 Slash commands can take some time to get registered globally, so if you want to test a command you should use
@@ -90,6 +82,6 @@ python bot.py
 
 ## Built With
 
-- [Python 3.11.5](https://www.python.org/)
+- [Python 3.14.2](https://www.python.org/)
 
 
