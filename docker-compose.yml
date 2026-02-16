@@ -1,7 +1,6 @@
 services:
   lavalink-config:
     image: python:3.12-alpine
-    container_name: klopfer-lavalink-config
     restart: "no"
     working_dir: /config
     command:
@@ -97,7 +96,6 @@ services:
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
-    container_name: klopfer-lavalink
     restart: unless-stopped
     depends_on:
       lavalink-config:
@@ -120,7 +118,6 @@ services:
     build:
       context: .
       no_cache: true
-    container_name: klopfer-bot
     restart: unless-stopped
     depends_on:
       - lavalink
