@@ -32,9 +32,10 @@ def fetch_latest_youtube_plugin_version() -> str:
 
 
 def update_plugin_version(config_text: str, version: str) -> str:
-    updated_text, replacement_count = DEPENDENCY_PATTERN.subn(
-        rf"\\1{version}\\3", config_text, count=1
-    )
+    def replace(match: re.Match) -> str:
+        return f'{match.group(1)}{version}{match.group(3)}'
+
+    updated_text, replacement_count = DEPENDENCY_PATTERN.subn(replace, config_text, count=1)
 
     if replacement_count == 0:
         raise ValueError("Could not find youtube-plugin dependency line in application.yml")

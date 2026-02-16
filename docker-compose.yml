@@ -22,8 +22,6 @@ services:
       - SERVER_PORT=2333
       - SERVER_ADDRESS=0.0.0.0
       - LAVALINK_SERVER_PASSWORD=youshallnotpass
-      - LAVALINK_SERVER_SOURCES_YOUTUBE=true
-      - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
     ports:
       - "2333:2333"
     volumes:
