@@ -1,15 +1,99 @@
-version: '3.8'
-
 services:
   lavalink-config:
     image: python:3.12-alpine
     container_name: klopfer-lavalink-config
     restart: "no"
     working_dir: /config
-    command: ["python", "/generate_lavalink_config.py"]
+    command:
+      - python
+      - -c
+      - |
+        import json
+        from urllib.request import Request, urlopen
+
+        github_url = "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
+        request = Request(
+            github_url,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "Klopfer-Bot-Lavalink-Config-Generator",
+            },
+        )
+
+        with urlopen(request, timeout=15) as response:
+            payload = json.load(response)
+
+        version = str(payload.get("tag_name", "")).strip().lstrip("v") or "1.17.0"
+
+        config = f'''server:
+          port: 2333
+          address: 0.0.0.0
+
+        lavalink:
+          plugins:
+            - dependency: "dev.lavalink.youtube:youtube-plugin:{version}"
+              snapshot: false
+          server:
+            password: "youshallnotpass"
+            sources:
+              youtube: false
+              bandcamp: true
+              soundcloud: true
+              twitch: true
+              vimeo: true
+              http: true
+              local: false
+            bufferDurationMs: 400
+            frameBufferDurationMs: 5000
+            youtubePlaylistLoadLimit: 6
+            playerUpdateInterval: 5
+            youtubeSearchEnabled: false
+            soundcloudSearchEnabled: true
+            gc-warnings: true
+
+        plugins:
+          youtube:
+            enabled: true
+            allowSearch: true
+            allowDirectVideoIds: true
+            allowDirectPlaylistIds: true
+            clients:
+              - MUSIC
+              - WEB
+              - ANDROID_TESTSUITE
+              - TVHTML5EMBEDDED
+
+        metrics:
+          prometheus:
+            enabled: false
+            endpoint: /metrics
+
+        sentry:
+          dsn: ""
+          environment: ""
+
+        logging:
+          file:
+            max-history: 30
+            max-size: 1GB
+            path: ./logs/
+
+          level:
+            root: INFO
+            lavalink: INFO
+
+          logback:
+            rollingpolicy:
+              max-file-size: 100MB
+              max-history: 30
+        '''
+
+        with open("/config/application.yml", "w", encoding="utf-8") as generated:
+            generated.write(config)
+
+        print(f"Generated /config/application.yml with youtube-plugin version {version}")
     volumes:
-      - ./lavalink:/config
-      - ./lavalink/generate_lavalink_config.py:/generate_lavalink_config.py:ro
+      - lavalink-config:/config
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
@@ -23,11 +107,12 @@ services:
       - SERVER_PORT=2333
       - SERVER_ADDRESS=0.0.0.0
       - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      - SPRING_CONFIG_LOCATION=file:/config/application.yml
     ports:
       - "2333:2333"
     volumes:
-      - ./lavalink/application.generated.yml:/opt/Lavalink/application.yml:ro
-      - ./lavalink/plugins:/opt/Lavalink/plugins
+      - lavalink-config:/config:ro
+      - lavalink-plugins:/opt/Lavalink/plugins
     networks:
       - klopfer-network
 
@@ -51,6 +136,10 @@ services:
       - klopfer-network
 
 volumes:
+  lavalink-config:
+    driver: local
+  lavalink-plugins:
+    driver: local
   bot-database:
     driver: local
   bot-leaderboard:
