@@ -6,9 +6,10 @@ services:
     container_name: klopfer-lavalink-config
     restart: "no"
     working_dir: /config
-    command: ["python", "generate_lavalink_config.py"]
+    command: ["python", "/generate_lavalink_config.py"]
     volumes:
       - ./lavalink:/config
+      - ./lavalink/generate_lavalink_config.py:/generate_lavalink_config.py:ro
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4

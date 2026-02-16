@@ -44,7 +44,9 @@ def update_plugin_version(config_text: str, version: str) -> str:
 
 
 def main() -> None:
-    base_path = Path(__file__).resolve().parent
+    base_path = Path.cwd()
+    if not (base_path / "application.yml").exists():
+        base_path = Path(__file__).resolve().parent
     input_path = base_path / "application.yml"
     output_path = base_path / "application.generated.yml"
 
