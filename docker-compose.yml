@@ -1,10 +1,22 @@
 version: '3.8'
 
 services:
+  lavalink-config:
+    image: python:3.12-alpine
+    container_name: klopfer-lavalink-config
+    restart: "no"
+    working_dir: /config
+    command: ["python", "generate_lavalink_config.py"]
+    volumes:
+      - ./lavalink:/config
+
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
     container_name: klopfer-lavalink
     restart: unless-stopped
+    depends_on:
+      lavalink-config:
+        condition: service_completed_successfully
     environment:
       - _JAVA_OPTIONS=-Xmx2G
       - SERVER_PORT=2333
@@ -14,6 +26,9 @@ services:
       - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
     ports:
       - "2333:2333"
+    volumes:
+      - ./lavalink/application.generated.yml:/opt/Lavalink/application.yml:ro
+      - ./lavalink/plugins:/opt/Lavalink/plugins
     networks:
       - klopfer-network
 

@@ -362,6 +362,15 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         player.is_playing = True
         await cog.play.callback(cog, ctx, query="x")
 
+    async def test_play_search_empty_tracks(self):
+        player = FakePlayer()
+        player.node = FakeNode(FakeResults(LoadType.SEARCH, []))
+        bot = DummyBot(lavalink_client=FakeLavalinkClient(player))
+        cog = Music(bot)
+        ctx = DummyContext(bot=bot, guild=DummyGuild())
+        await cog.play.callback(cog, ctx, query="x")
+        ctx.send.assert_awaited_with("I couldn't find any tracks for that query.")
+
     async def test_play_url(self):
         player = FakePlayer()
         player.node = FakeNode(FakeResults(LoadType.SEARCH, [FakeTrack()]))

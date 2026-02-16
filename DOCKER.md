@@ -26,6 +26,11 @@ Diese Anleitung beschreibt, wie du den Klopfer-Bot mit Docker und Lavalink deplo
    - `config.json`: Passe den Bot-Prefix und den Invite-Link an
    - `lavalink/application.yml`: Lavalink-Konfiguration (Passwort, Audio-Quellen, etc.)
 
+   Hinweis: Beim `docker-compose up` wird automatisch `lavalink/application.generated.yml`
+   erzeugt. Dabei wird die neueste `youtube-plugin` Version aus dem offiziellen
+   `lavalink-devs/youtube-source` GitHub-Release verwendet und in die Konfiguration
+   eingesetzt. Du musst keine Plugin-JAR manuell in den Plugin-Ordner legen.
+
 ## Deployment
 
 ### Mit Docker Compose starten

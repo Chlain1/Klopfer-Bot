@@ -246,6 +246,7 @@ class Music(commands.Cog, name="music"):
 
         # Get the results for the query from Lavalink.
         results = await player.node.get_tracks(query)
+        tracks = results.tracks or []
 
         embed = discord.Embed(color=discord.Color.blurple())
 
@@ -255,11 +256,11 @@ class Music(commands.Cog, name="music"):
         #   SEARCH   - query prefixed with either "ytsearch:" or "scsearch:". This could possibly be expanded with plugins.
         #   EMPTY    - no results for the query (result.tracks will be empty)
         #   ERROR    - the track encountered an exception during loading
-        if results.load_type == LoadType.EMPTY:
+        if results.load_type == LoadType.ERROR:
+            return await ctx.send("I couldn't load tracks for that query.")
+        if results.load_type == LoadType.EMPTY or not tracks:
             return await ctx.send("I couldn't find any tracks for that query.")
         elif results.load_type == LoadType.PLAYLIST:
-            tracks = results.tracks
-
             # Add all of the tracks from the playlist to the queue.
             for track in tracks:
                 # requester isn't necessary but it helps keep track of who queued what.
@@ -269,7 +270,7 @@ class Music(commands.Cog, name="music"):
             embed.title = 'Playlist Enqueued!'
             embed.description = f'{results.playlist_info.name} - {len(tracks)} tracks'
         else:
-            track = results.tracks[0]
+            track = tracks[0]
             embed.title = 'Track Enqueued'
             embed.description = f'[{track.title}]({track.uri})'
 
