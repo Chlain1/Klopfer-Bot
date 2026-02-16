@@ -13,6 +13,16 @@ import random
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
 
+def _get_lavalink_config():
+    lavalink_host = os.getenv('LAVALINK_HOST', 'localhost')
+    try:
+        lavalink_port = int(os.getenv('LAVALINK_PORT', '2333'))
+    except ValueError:
+        lavalink_port = 2333
+    lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
+    return lavalink_host, lavalink_port, lavalink_password
+
+
 class LavalinkVoiceClient(discord.VoiceProtocol):
     """
     This is the preferred way to handle external voice sending
@@ -32,10 +42,7 @@ class LavalinkVoiceClient(discord.VoiceProtocol):
             # We store it in `self.client` so that it may persist across cog reloads,
             # however this is not mandatory.
             self.client.lavalink = lavalink.Client(client.user.id)
-            # Use environment variables for Docker deployment, fallback to localhost for local development
-            lavalink_host = os.getenv('LAVALINK_HOST', 'localhost')
-            lavalink_port = int(os.getenv('LAVALINK_PORT', '2333'))
-            lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
+            lavalink_host, lavalink_port, lavalink_password = _get_lavalink_config()
             self.client.lavalink.add_node(host=lavalink_host, port=lavalink_port, password=lavalink_password,
                                           region='de', name='default-node')
 
@@ -120,7 +127,8 @@ class Music(commands.Cog, name="music"):
         self.bot = bot
         if not hasattr(bot, 'lavalink'):
             bot.lavalink = lavalink.Client(bot.user.id)
-            bot.lavalink.add_node(host='localhost', port=2334, password='youshallnotpass',
+            lavalink_host, lavalink_port, lavalink_password = _get_lavalink_config()
+            bot.lavalink.add_node(host=lavalink_host, port=lavalink_port, password=lavalink_password,
                                   region='de', name='default-node')
 
         self.lavalink: lavalink.Client = bot.lavalink
