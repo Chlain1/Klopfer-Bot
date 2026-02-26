@@ -10,19 +10,27 @@ services:
         import json
         from urllib.request import Request, urlopen
 
-        github_url = "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
-        request = Request(
-            github_url,
-            headers={
-                "Accept": "application/vnd.github+json",
-                "User-Agent": "Klopfer-Bot-Lavalink-Config-Generator",
-            },
-        )
+        version = "1.17.0"
+        try:
+            github_url = "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
+            request = Request(
+                github_url,
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "Klopfer-Bot-Lavalink-Config-Generator",
+                },
+            )
 
-        with urlopen(request, timeout=15) as response:
-            payload = json.load(response)
+            with urlopen(request, timeout=15) as response:
+                payload = json.load(response)
 
-        version = str(payload.get("tag_name", "")).strip().lstrip("v") or "1.17.0"
+            resolved_version = str(payload.get("tag_name", "")).strip().lstrip("v")
+            if resolved_version:
+                version = resolved_version
+            else:
+                print("No tag_name in GitHub response, using fallback 1.17.0")
+        except Exception as error:
+            print(f"Failed to fetch latest youtube-plugin version ({error}), using fallback 1.17.0")
 
         config = f'''server:
           port: 2333
@@ -106,6 +114,8 @@ services:
       - SERVER_ADDRESS=0.0.0.0
       - LAVALINK_SERVER_PASSWORD=youshallnotpass
       - SPRING_CONFIG_LOCATION=file:/config/application.yml
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+      - SPRING_CLOUD_CONFIG_IMPORT_CHECK_ENABLED=false
     ports:
       - "2333:2333"
     volumes:

@@ -30,6 +30,8 @@ Diese Anleitung beschreibt, wie du den Klopfer-Bot mit Docker und Lavalink deplo
    in einem Docker-Volume erzeugt. Dabei wird die neueste `youtube-plugin` Version
    aus dem offiziellen `lavalink-devs/youtube-source` GitHub-Release verwendet.
    Du musst keine Plugin-JAR manuell in den Plugin-Ordner legen.
+   Falls GitHub kurzzeitig nicht erreichbar ist, wird automatisch auf eine
+   stabile Fallback-Version gewechselt, damit der Stack trotzdem startet.
 
    Portainer-Hinweis: Der Stack verwendet absichtlich keine relativen Host-Bind-Mounts
    für Lavalink-Konfigurationsdateien, damit das Setup in Portainer stabil funktioniert.
