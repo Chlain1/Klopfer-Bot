@@ -120,7 +120,6 @@ services:
       - "2333:2333"
     volumes:
       - lavalink-config:/config:ro
-      - lavalink-plugins:/opt/Lavalink/plugins
     networks:
       - klopfer-network
 
@@ -144,8 +143,6 @@ services:
 
 volumes:
   lavalink-config:
-    driver: local
-  lavalink-plugins:
     driver: local
   bot-database:
     driver: local
