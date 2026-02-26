@@ -10,7 +10,7 @@ services:
         import json
         from urllib.request import Request, urlopen
 
-        version = "1.17.0"
+        version = "1.18.0"
         try:
             github_url = "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
             request = Request(
@@ -28,9 +28,9 @@ services:
             if resolved_version:
                 version = resolved_version
             else:
-                print("No tag_name in GitHub response, using fallback 1.17.0")
+                print("No tag_name in GitHub response, using fallback 1.18.0")
         except Exception as error:
-            print(f"Failed to fetch latest youtube-plugin version ({error}), using fallback 1.17.0")
+              print(f"Failed to fetch latest youtube-plugin version ({error}), using fallback 1.18.0")
 
         config = f'''server:
           port: 2333
@@ -66,9 +66,10 @@ services:
             allowDirectPlaylistIds: true
             clients:
               - MUSIC
+              - ANDROID_VR
               - WEB
-              - ANDROID_TESTSUITE
-              - TVHTML5EMBEDDED
+              - WEBEMBEDDED
+              - MWEB
 
         metrics:
           prometheus:
