@@ -65,8 +65,8 @@ services:
             allowDirectVideoIds: true
             allowDirectPlaylistIds: true
             clients:
-              - MUSIC
-              - ANDROID_VR
+              - TVHTML5_SIMPLY
+              - IOS
               - WEB
               - WEBEMBEDDED
               - MWEB
@@ -101,7 +101,7 @@ services:
 
         print(f"Generated /config/application.yml with youtube-plugin version {version}")
     volumes:
-      - lavalink-config:/config
+      - lavalink-config-v2:/config
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
@@ -120,7 +120,7 @@ services:
     ports:
       - "2333:2333"
     volumes:
-      - lavalink-config:/config:ro
+      - lavalink-config-v2:/config:ro
     networks:
       - klopfer-network
 
@@ -143,7 +143,7 @@ services:
       - klopfer-network
 
 volumes:
-  lavalink-config:
+  lavalink-config-v2:
     driver: local
   bot-database:
     driver: local
