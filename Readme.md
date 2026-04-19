@@ -15,9 +15,6 @@ the `@app_commands.guilds()` decorator so that it gets registered instantly. Exa
 @app_commands.guilds(discord.Object(id=GUILD_ID)) # Place your guild ID here
 ```
 
-When using the template you confirm that you have read the [license](LICENSE.md) and comprehend that I can take down
-your repository if you do not meet these requirements.
-
 ## How to download it
 
 This repository is now a template, on the top left you can simply click on "**Use this template**" to create a GitHub
