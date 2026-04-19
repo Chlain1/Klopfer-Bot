@@ -84,4 +84,8 @@ python bot.py
 
 - [Python 3.14.2](https://www.python.org/)
 
+## Based on
+
+This Bot was build on the Template from kkrypt0nn
+- [Bot-Template Github](https://github.com/kkrypt0nn/Python-Discord-Bot-Template)
 
