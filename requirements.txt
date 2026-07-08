@@ -1,6 +1,6 @@
 aiohttp
 aiosqlite
-discord.py
+discord.py[voice]
 python-dotenv
-PyNaCl
+davey
 yt-dlp
