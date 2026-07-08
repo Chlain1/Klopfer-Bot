@@ -1,7 +1,6 @@
 aiohttp
 aiosqlite
 discord.py
-discord
 python-dotenv
 PyNaCl
 yt-dlp
