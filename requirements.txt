@@ -2,11 +2,6 @@ aiohttp
 aiosqlite
 discord.py[voice]
 python-dotenv
-<<<<<<< HEAD
-PyNaCl
-yt-dlp
-bgutil-ytdlp-pot-provider
-=======
 davey
 yt-dlp
->>>>>>> 897fc9824ce30ea301989a3b2f028da53175587c
+bgutil-ytdlp-pot-provider
