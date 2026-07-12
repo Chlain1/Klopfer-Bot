@@ -1,10 +1,23 @@
+import asyncio
+import json
+import os
 import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from discord.ext import commands
 
-from cogs.music import GuildMusicState, Music, Track, _track_from_entry, ensure_voice
+from cogs.music import (
+    ExtractionError,
+    GuildMusicState,
+    Music,
+    Track,
+    _last_error_line,
+    _run_ytdlp,
+    _extract_stream,
+    _track_from_entry,
+    ensure_voice,
+)
 from tests.helpers import DummyContext, DummyGuild, DummyMember, make_permissions
 
 
@@ -51,6 +64,15 @@ class DummyBot:
         self.logger = MagicMock()
         self.loop = MagicMock()
         self.get_guild = MagicMock(return_value=None)
+
+
+def make_process(returncode=0, stdout=b"", stderr=b""):
+    process = SimpleNamespace()
+    process.returncode = returncode
+    process.communicate = AsyncMock(return_value=(stdout, stderr))
+    process.kill = MagicMock()
+    process.wait = AsyncMock()
+    return process
 
 
 class TestEnsureVoice(unittest.IsolatedAsyncioTestCase):
@@ -142,6 +164,92 @@ class TestEnsureVoice(unittest.IsolatedAsyncioTestCase):
         voice_channel.connect.assert_not_awaited()
 
 
+class TestLastErrorLine(unittest.TestCase):
+    def test_prefers_error_line(self):
+        stderr = b"WARNING: something\nERROR: Video unavailable\ntrailing noise"
+        self.assertEqual(_last_error_line(stderr), "Video unavailable")
+
+    def test_falls_back_to_last_line(self):
+        stderr = b"some output\nlast line"
+        self.assertEqual(_last_error_line(stderr), "last line")
+
+    def test_empty_stderr(self):
+        self.assertEqual(_last_error_line(b""), "unknown yt-dlp error")
+
+
+class TestRunYtdlp(unittest.IsolatedAsyncioTestCase):
+    async def test_returns_parsed_json(self):
+        process = make_process(stdout=json.dumps({"title": "Song"}).encode())
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            info = await _run_ytdlp("-J", "query")
+        self.assertEqual(info, {"title": "Song"})
+
+    async def test_raises_on_nonzero_exit(self):
+        process = make_process(returncode=1, stderr=b"ERROR: Sign in to confirm")
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            with self.assertRaises(ExtractionError) as caught:
+                await _run_ytdlp("-J", "query")
+        self.assertIn("Sign in to confirm", str(caught.exception))
+
+    async def test_returns_none_on_empty_output(self):
+        process = make_process(stdout=b"\n")
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            self.assertIsNone(await _run_ytdlp("-J", "query"))
+
+    async def test_raises_on_invalid_json(self):
+        process = make_process(stdout=b"not json")
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            with self.assertRaises(ExtractionError):
+                await _run_ytdlp("-J", "query")
+
+    async def test_includes_pot_provider_args_when_configured(self):
+        process = make_process(stdout=b"{}")
+        with patch.dict(os.environ, {"POT_PROVIDER_URL": "http://pot-provider:4416"}):
+            with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)) as exec_mock:
+                await _run_ytdlp("-J", "query")
+        args = exec_mock.call_args.args
+        self.assertIn("--extractor-args", args)
+        self.assertIn("youtubepot-bgutilhttp:base_url=http://pot-provider:4416", args)
+
+    async def test_omits_pot_provider_args_by_default(self):
+        process = make_process(stdout=b"{}")
+        with patch.dict(os.environ):
+            os.environ.pop("POT_PROVIDER_URL", None)
+            with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)) as exec_mock:
+                await _run_ytdlp("-J", "query")
+        self.assertNotIn("--extractor-args", exec_mock.call_args.args)
+
+    async def test_kills_process_on_timeout(self):
+        process = make_process()
+
+        async def never_finish():
+            await asyncio.sleep(3600)
+
+        process.communicate = MagicMock(side_effect=never_finish)
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            with patch("cogs.music.EXTRACTION_TIMEOUT", 0.01):
+                with self.assertRaises(ExtractionError):
+                    await _run_ytdlp("-J", "query")
+        process.kill.assert_called_once()
+
+
+class TestExtractStream(unittest.IsolatedAsyncioTestCase):
+    async def test_unwraps_search_playlist(self):
+        wrapped = {"entries": [None, {"title": "Song", "url": "https://stream"}]}
+        with patch("cogs.music._run_ytdlp", AsyncMock(return_value=wrapped)):
+            info = await _extract_stream("ytsearch1:song")
+        self.assertEqual(info["title"], "Song")
+
+    async def test_empty_search_playlist(self):
+        with patch("cogs.music._run_ytdlp", AsyncMock(return_value={"entries": []})):
+            self.assertIsNone(await _extract_stream("ytsearch1:song"))
+
+    async def test_passes_through_single_track(self):
+        info = {"title": "Song", "url": "https://stream"}
+        with patch("cogs.music._run_ytdlp", AsyncMock(return_value=info)):
+            self.assertEqual(await _extract_stream("https://x"), info)
+
+
 class TestTrackFromEntry(unittest.TestCase):
     def test_prefers_webpage_url(self):
         entry = {"webpage_url": "https://example.com/a", "title": "A", "duration": 10}
@@ -170,12 +278,23 @@ class TestTrackFromEntry(unittest.TestCase):
         track = _track_from_entry(entry, requester_id=5)
         self.assertEqual(track.title, "Unknown title")
 
+    def test_keeps_search_query(self):
+        entry = {"url": "https://example.com/e", "title": "E"}
+        track = _track_from_entry(entry, requester_id=5, search_query="some song")
+        self.assertEqual(track.search_query, "some song")
+
 
 class TestMusicCog(unittest.IsolatedAsyncioTestCase):
     def make_cog(self):
         bot = DummyBot()
         cog = Music(bot)
         return bot, cog
+
+    async def drain_prefetch(self, cog):
+        # Prefetch tasks must finish inside the surrounding patch context, so they
+        # never hit a real yt-dlp subprocess.
+        if cog._prefetch_tasks:
+            await asyncio.gather(*cog._prefetch_tasks, return_exceptions=True)
 
     async def test_cog_command_error(self):
         _, cog = self.make_cog()
@@ -217,10 +336,46 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
     async def test_resolve_tracks_search(self):
         _, cog = self.make_cog()
         info = {"title": "Song", "webpage_url": "https://youtu.be/1", "duration": 5}
-        with patch("cogs.music._extract_flat", return_value=info) as extract:
+        with patch("cogs.music._extract_flat", AsyncMock(return_value=info)) as extract:
             tracks, playlist_title = await cog.resolve_tracks("some song", requester_id=1)
         self.assertEqual(extract.call_args.args[0], "ytsearch1:some song")
         self.assertEqual(len(tracks), 1)
+        self.assertEqual(tracks[0].search_query, "some song")
+        self.assertIsNone(playlist_title)
+
+    async def test_resolve_tracks_search_falls_back_to_next_provider(self):
+        _, cog = self.make_cog()
+        info = {"title": "Song", "webpage_url": "https://soundcloud.com/1", "duration": 5}
+
+        async def extract(query):
+            if query.startswith("ytsearch"):
+                raise ExtractionError("Sign in to confirm you're not a bot")
+            return info
+
+        with patch("cogs.music._extract_flat", side_effect=extract) as mock:
+            tracks, playlist_title = await cog.resolve_tracks("some song", requester_id=1)
+        self.assertEqual(mock.call_count, 2)
+        self.assertEqual(mock.call_args.args[0], "scsearch1:some song")
+        self.assertEqual(len(tracks), 1)
+
+    async def test_resolve_tracks_search_empty_result_tries_next_provider(self):
+        _, cog = self.make_cog()
+        results = iter([{"entries": []}, {"title": "Song", "url": "https://soundcloud.com/1"}])
+        with patch("cogs.music._extract_flat", AsyncMock(side_effect=lambda q: next(results))):
+            tracks, _ = await cog.resolve_tracks("some song", requester_id=1)
+        self.assertEqual(len(tracks), 1)
+
+    async def test_resolve_tracks_search_all_providers_fail(self):
+        _, cog = self.make_cog()
+        with patch("cogs.music._extract_flat", AsyncMock(side_effect=ExtractionError("down"))):
+            with self.assertRaises(ExtractionError):
+                await cog.resolve_tracks("some song", requester_id=1)
+
+    async def test_resolve_tracks_search_no_results_anywhere(self):
+        _, cog = self.make_cog()
+        with patch("cogs.music._extract_flat", AsyncMock(return_value={"entries": []})):
+            tracks, playlist_title = await cog.resolve_tracks("some song", requester_id=1)
+        self.assertEqual(tracks, [])
         self.assertIsNone(playlist_title)
 
     async def test_resolve_tracks_playlist(self):
@@ -233,10 +388,11 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
                 {"title": "B", "url": "https://youtu.be/b"},
             ],
         }
-        with patch("cogs.music._extract_flat", return_value=info):
+        with patch("cogs.music._extract_flat", AsyncMock(return_value=info)):
             tracks, playlist_title = await cog.resolve_tracks("https://youtube.com/playlist?list=x", requester_id=1)
         self.assertEqual(len(tracks), 2)
         self.assertEqual(playlist_title, "My Playlist")
+        self.assertIsNone(tracks[0].search_query)
 
     async def test_resolve_tracks_playlist_capped(self):
         _, cog = self.make_cog()
@@ -244,17 +400,42 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
             "title": "Huge Playlist",
             "entries": [{"title": str(i), "url": f"https://youtu.be/{i}"} for i in range(100)],
         }
-        with patch("cogs.music._extract_flat", return_value=info):
+        with patch("cogs.music._extract_flat", AsyncMock(return_value=info)):
             tracks, playlist_title = await cog.resolve_tracks("https://youtube.com/playlist?list=x", requester_id=1)
         from cogs.music import MAX_PLAYLIST_TRACKS
         self.assertEqual(len(tracks), MAX_PLAYLIST_TRACKS)
 
     async def test_resolve_tracks_empty(self):
         _, cog = self.make_cog()
-        with patch("cogs.music._extract_flat", return_value=None):
+        with patch("cogs.music._extract_flat", AsyncMock(return_value=None)):
             tracks, playlist_title = await cog.resolve_tracks("https://youtube.com/watch?v=x", requester_id=1)
         self.assertEqual(tracks, [])
         self.assertIsNone(playlist_title)
+
+    async def test_resolve_stream_info_falls_back_to_search_providers(self):
+        _, cog = self.make_cog()
+        track = Track(
+            query="https://youtube.com/watch?v=gone", title="Song", webpage_url="https://x",
+            duration=1, requester=1, search_query="some song",
+        )
+
+        async def extract(query):
+            if query == "scsearch1:some song":
+                return {"url": "https://stream", "title": "Song"}
+            raise ExtractionError("unavailable")
+
+        with patch("cogs.music._extract_stream", side_effect=extract) as mock:
+            info = await cog._resolve_stream_info(track)
+        self.assertEqual(info["url"], "https://stream")
+        self.assertEqual(mock.call_count, 3)  # original URL, ytsearch, scsearch
+
+    async def test_resolve_stream_info_no_fallback_without_search_query(self):
+        _, cog = self.make_cog()
+        track = Track(query="https://x", title="Song", webpage_url="https://x", duration=1, requester=1)
+        with patch("cogs.music._extract_stream", AsyncMock(side_effect=ExtractionError("gone"))) as mock:
+            with self.assertRaises(ExtractionError):
+                await cog._resolve_stream_info(track)
+        self.assertEqual(mock.call_count, 1)
 
     async def test_play_no_tracks(self):
         bot, cog = self.make_cog()
@@ -456,11 +637,48 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         track = Track(query="q", title="Song", webpage_url="https://x", duration=1, requester=1)
         state.queue.append(track)
 
-        with patch("cogs.music._extract_stream", return_value={"url": "https://stream"}):
-            await cog._play_next(1)
+        with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
 
         vc.play.assert_called_once()
         self.assertIs(state.current, track)
+
+    async def test_play_next_uses_prefetched_info(self):
+        bot, cog = self.make_cog()
+        vc = DummyVoiceClient(SimpleNamespace(id=1))
+        guild = SimpleNamespace(voice_client=vc, get_channel=MagicMock(return_value=None))
+        bot.get_guild = MagicMock(return_value=guild)
+        state = cog.get_state(1)
+        track = Track(query="q", title="Song", webpage_url="https://x", duration=1, requester=1)
+        track.prefetched = {"url": "https://stream"}
+        state.queue.append(track)
+
+        with patch("cogs.music._extract_stream", AsyncMock()) as extract:
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
+
+        extract.assert_not_awaited()
+        vc.play.assert_called_once()
+        self.assertIsNone(track.prefetched)
+
+    async def test_play_next_prefetches_next_track(self):
+        bot, cog = self.make_cog()
+        vc = DummyVoiceClient(SimpleNamespace(id=1))
+        guild = SimpleNamespace(voice_client=vc, get_channel=MagicMock(return_value=None))
+        bot.get_guild = MagicMock(return_value=guild)
+        state = cog.get_state(1)
+        first = Track(query="a", title="A", webpage_url="https://a", duration=1, requester=1)
+        second = Track(query="b", title="B", webpage_url="https://b", duration=1, requester=1)
+        state.queue.extend([first, second])
+
+        with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
+                await self.drain_prefetch(cog)
+
+        self.assertIs(state.current, first)
+        self.assertEqual(second.prefetched, {"url": "https://stream"})
 
     async def test_play_next_backfills_missing_title(self):
         bot, cog = self.make_cog()
@@ -471,8 +689,9 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         track = Track(query="q", title="Unknown title", webpage_url="https://x", duration=1, requester=1)
         state.queue.append(track)
 
-        with patch("cogs.music._extract_stream", return_value={"url": "https://stream", "title": "Real Title"}):
-            await cog._play_next(1)
+        with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream", "title": "Real Title"})):
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
 
         self.assertEqual(track.title, "Real Title")
 
@@ -486,9 +705,10 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         good_track = Track(query="good", title="Good", webpage_url="https://good", duration=1, requester=1)
         state.queue.extend([bad_track, good_track])
 
-        results = iter([{"url": None}, {"url": "https://stream"}])
-        with patch("cogs.music._extract_stream", side_effect=lambda q: next(results)):
-            await cog._play_next(1)
+        results = {"bad": {"url": None}, "good": {"url": "https://stream"}}
+        with patch("cogs.music._extract_stream", AsyncMock(side_effect=lambda q: results[q])):
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
 
         vc.play.assert_called_once()
         self.assertIs(state.current, good_track)
@@ -503,13 +723,14 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         good_track = Track(query="good", title="Good", webpage_url="https://good", duration=1, requester=1)
         state.queue.extend([bad_track, good_track])
 
-        def side_effect(query):
+        async def side_effect(query):
             if query == "bad":
-                raise RuntimeError("network error")
+                raise ExtractionError("network error")
             return {"url": "https://stream"}
 
         with patch("cogs.music._extract_stream", side_effect=side_effect):
-            await cog._play_next(1)
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
 
         vc.play.assert_called_once()
         self.assertIs(state.current, good_track)
@@ -524,7 +745,7 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.current = track
         state.repeat = True
 
-        with patch("cogs.music._extract_stream", return_value={"url": "https://stream"}):
+        with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
             await cog._play_next(1)
 
         self.assertIs(state.current, track)
@@ -542,8 +763,9 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.repeat_queue = True
         state.queue.append(next_track)
 
-        with patch("cogs.music._extract_stream", return_value={"url": "https://stream"}):
+        with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
             await cog._play_next(1)
+            await self.drain_prefetch(cog)
 
         self.assertIs(state.current, next_track)
         self.assertEqual(state.queue, [current])
@@ -561,7 +783,7 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.current = track
         state.repeat = True
 
-        with patch("cogs.music._extract_stream", side_effect=RuntimeError("always fails")):
+        with patch("cogs.music._extract_stream", AsyncMock(side_effect=ExtractionError("always fails"))):
             await cog._play_next(1)
 
         self.assertFalse(state.repeat)
@@ -580,7 +802,7 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.repeat_queue = True
         state.queue.append(broken)
 
-        with patch("cogs.music._extract_stream", side_effect=RuntimeError("always fails")):
+        with patch("cogs.music._extract_stream", AsyncMock(side_effect=ExtractionError("always fails"))):
             await cog._play_next(1)
 
         self.assertFalse(state.repeat_queue)
@@ -597,11 +819,37 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.lowpass_freq = 50
         state.queue.append(Track(query="q", title="Song", webpage_url="https://x", duration=1, requester=1))
 
-        with patch("cogs.music._extract_stream", return_value={"url": "https://stream"}):
+        with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
             with patch("cogs.music.discord.FFmpegPCMAudio") as ffmpeg:
                 await cog._play_next(1)
 
         self.assertIn("lowpass=f=50", ffmpeg.call_args.kwargs["options"])
+
+    async def test_update_ytdlp_logs_version_change(self):
+        bot, cog = self.make_cog()
+        process = make_process(returncode=0)
+        versions = iter(["2026.01.01", "2026.07.01"])
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            with patch.object(cog, "_ytdlp_version", AsyncMock(side_effect=lambda: next(versions))):
+                await cog.update_ytdlp.coro(cog)
+        bot.logger.info.assert_called_once()
+        self.assertIn("2026.07.01", bot.logger.info.call_args.args[0])
+
+    async def test_update_ytdlp_logs_failure(self):
+        bot, cog = self.make_cog()
+        process = make_process(returncode=1, stderr=b"ERROR: no network")
+        with patch("cogs.music.asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+            with patch.object(cog, "_ytdlp_version", AsyncMock(return_value="2026.01.01")):
+                await cog.update_ytdlp.coro(cog)
+        bot.logger.warning.assert_called_once()
+
+    async def test_cog_load_and_unload_manage_update_task(self):
+        _, cog = self.make_cog()
+        with patch.object(cog, "update_ytdlp") as loop_mock:
+            await cog.cog_load()
+            loop_mock.start.assert_called_once()
+            await cog.cog_unload()
+            loop_mock.cancel.assert_called_once()
 
     async def test_setup(self):
         bot = DummyBot()

@@ -6,9 +6,24 @@ services:
     restart: unless-stopped
     environment:
       - TOKEN=${TOKEN}
+      # Points yt-dlp at the PO-token provider below, so YouTube works even from
+      # server IPs that Google flags as bots - without any cookies or accounts.
+      - POT_PROVIDER_URL=http://pot-provider:4416
+    depends_on:
+      - pot-provider
     volumes:
       - bot-database:/app/database
       - bot-leaderboard:/app/leaderboard
+    networks:
+      - klopfer-network
+
+  # Generates YouTube "PO tokens" on demand for yt-dlp (bgutil-ytdlp-pot-provider
+  # plugin). Only reachable inside the compose network. If this service is down,
+  # music keeps working - YouTube may then just refuse some requests, in which case
+  # searches fall back to SoundCloud automatically.
+  pot-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    restart: unless-stopped
     networks:
       - klopfer-network
 

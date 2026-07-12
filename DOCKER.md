@@ -59,6 +59,22 @@ den Voice-Channel gestreamt - es wird zu keinem Zeitpunkt etwas heruntergeladen
 oder auf die Festplatte geschrieben. Das spart Speicherplatz und Zeit und
 entfällt die Abhängigkeit von einem separaten, ausfallanfälligen Lavalink-Dienst.
 
+Suchanfragen werden zuerst auf YouTube und bei Fehlschlag automatisch auf
+SoundCloud aufgelöst. `yt-dlp` läuft als Subprozess und aktualisiert sich beim
+Start sowie alle 12 Stunden selbst (`pip install --upgrade`), sodass Änderungen
+an den Plattform-APIs ohne Rebuild oder Neustart des Containers geheilt werden -
+es sind keine Cookies oder API-Tokens nötig.
+
+Gegen YouTubes Bot-Erkennung ("Sign in to confirm you're not a bot", typisch bei
+Server-/Datacenter-IPs) läuft der Sidecar-Service `pot-provider`
+([bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)),
+der die von YouTube verlangten "PO Tokens" automatisch generiert - ohne Account
+und ohne Cookies. Der Bot findet ihn über die Umgebungsvariable
+`POT_PROVIDER_URL` (gesetzt in `docker-compose.yml`). Fällt der Service aus oder
+ist die Variable nicht gesetzt (z.B. lokale Entwicklung), läuft die Musik ganz
+normal weiter; YouTube kann dann lediglich wieder einzelne Anfragen ablehnen,
+wofür der SoundCloud-Fallback greift.
+
 ## Volumes
 
 - `bot-database`: Bot-Datenbank (persistent)
@@ -79,9 +95,16 @@ entfällt die Abhängigkeit von einem separaten, ausfallanfälligen Lavalink-Die
    ```
 
 3. Manche Plattformen (z.B. YouTube) ändern gelegentlich ihre interne API, worauf
-   `yt-dlp` reagieren muss. Falls Songs plötzlich nicht mehr laden, hilft meist
-   ein Update von `yt-dlp` in `requirements.txt` gefolgt von einem Rebuild des
-   Images.
+   `yt-dlp` reagieren muss. Der Bot aktualisiert `yt-dlp` (samt PO-Token-Plugin)
+   deshalb automatisch beim Start und alle 12 Stunden - ein manuelles Update oder
+   Rebuild ist normalerweise nicht nötig. Falls Songs trotzdem länger nicht laden,
+   zeigen die Logs (`yt-dlp self-update ...`), ob das Update fehlschlägt.
+
+4. Meldet YouTube "Sign in to confirm you're not a bot", prüfe, ob der
+   `pot-provider`-Service läuft (`docker-compose ps`, `docker-compose logs
+   pot-provider`). Gelegentliches `docker-compose pull pot-provider` hält das
+   Provider-Image aktuell, falls sich Client- und Server-Version zu weit
+   auseinanderentwickeln (yt-dlp warnt dann in den Logs).
 
 ## Entwicklung
 

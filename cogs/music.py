@@ -1,50 +1,39 @@
 import asyncio
+import json
+import os
 import random
 import re
+import sys
 
 import discord
-import yt_dlp as youtube_dl
-from discord.ext import commands
-
-# Silence yt-dlp's "please report this issue" nagging, we already log errors ourselves.
-youtube_dl.utils.bug_reports_message = lambda *args, **kwargs: ''
+from discord.ext import commands, tasks
 
 url_rx = re.compile(r'https?://(?:www\.)?.+')
 
-YTDL_COMMON_OPTIONS = {
-    'quiet': True,
-    'no_warnings': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'source_address': '0.0.0.0',
-    'default_search': 'ytsearch',
-}
+# yt-dlp is run as a subprocess instead of being imported as a module. Every
+# extraction therefore picks up whatever version is currently installed, which
+# lets the self-update task below fix site breakage (usually YouTube) while the
+# bot keeps running - no cookies, no restart, no redeploy needed.
+YTDLP_COMMON_ARGS = [
+    '--quiet',
+    '--no-warnings',
+    '--no-check-certificates',
+    '--source-address', '0.0.0.0',
+    '--default-search', 'ytsearch',
+]
 
-# Used to cheaply list what a query/URL points at (search result, single video or
-# playlist) without resolving playable stream URLs for every entry up front.
-YTDL_FLAT_OPTIONS = {
-    **YTDL_COMMON_OPTIONS,
-    'extract_flat': 'in_playlist',
-    'skip_download': True,
-}
+# Search providers tried in order when the user gives a plain search term (or a
+# track from a search can't be streamed anymore): YouTube first, SoundCloud as
+# fallback. Both are yt-dlp search prefixes, so adding another provider here is
+# enough to enable it.
+SEARCH_PROVIDERS = ('ytsearch', 'scsearch')
 
-# Used right before playback to resolve the direct, streamable audio URL of a single
-# track. `download` is never set to True anywhere in this module: FFmpeg reads directly
-# from the returned URL and pipes the decoded audio into Discord, nothing ever touches disk.
-YTDL_STREAM_OPTIONS = {
-    **YTDL_COMMON_OPTIONS,
-    'format': 'bestaudio/best',
-    'noplaylist': True,
-}
+# How long a single yt-dlp invocation may take before it's killed, so a hanging
+# extractor can't freeze the queue indefinitely.
+EXTRACTION_TIMEOUT = 30
 
-# Reconnect flags help FFmpeg survive brief network hiccups while streaming instead of
-# just dying, since it's reading the audio live over the network rather than from a file.
-FFMPEG_BEFORE_OPTIONS = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
-FFMPEG_OPTIONS = '-vn'
-
-# Caps how many tracks a single playlist link can enqueue at once, so pasting a huge
-# playlist doesn't flood the queue with hundreds of yt-dlp lookups.
+# Caps how many tracks a single playlist link can enqueue at once. Also passed
+# to yt-dlp via --playlist-items so huge playlists aren't even listed fully.
 MAX_PLAYLIST_TRACKS = 50
 
 # After this many failed track resolutions in a row, give up on repeat/repeat-queue
@@ -52,19 +41,87 @@ MAX_PLAYLIST_TRACKS = 50
 # forever.
 MAX_CONSECUTIVE_FAILURES = 3
 
+# Reconnect flags help FFmpeg survive brief network hiccups while streaming instead of
+# just dying, since it's reading the audio live over the network rather than from a file.
+FFMPEG_BEFORE_OPTIONS = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+FFMPEG_OPTIONS = '-vn'
 
-def _extract_flat(query: str):
-    with youtube_dl.YoutubeDL(YTDL_FLAT_OPTIONS) as ydl:
-        return ydl.extract_info(query, download=False)
+
+class ExtractionError(Exception):
+    """Raised when yt-dlp fails to resolve a query."""
 
 
-def _extract_stream(query: str):
-    with youtube_dl.YoutubeDL(YTDL_STREAM_OPTIONS) as ydl:
-        return ydl.extract_info(query, download=False)
+def _pot_provider_args() -> list[str]:
+    """
+    The bgutil-ytdlp-pot-provider plugin (installed alongside yt-dlp) generates the
+    "PO tokens" YouTube demands from IPs it distrusts (e.g. datacenter/server IPs),
+    without any account or cookies. It needs the companion provider service from
+    docker-compose.yml; when POT_PROVIDER_URL is unset (e.g. local development),
+    yt-dlp simply runs without it.
+    """
+    base_url = os.environ.get('POT_PROVIDER_URL')
+    if not base_url:
+        return []
+    return ['--extractor-args', f'youtubepot-bgutilhttp:base_url={base_url}']
+
+
+def _last_error_line(stderr: bytes) -> str:
+    lines = [line.strip() for line in stderr.decode(errors='replace').splitlines() if line.strip()]
+    for line in reversed(lines):
+        if line.startswith('ERROR:'):
+            return line.removeprefix('ERROR:').strip()[:300]
+    return (lines[-1] if lines else 'unknown yt-dlp error')[:300]
+
+
+async def _run_ytdlp(*args: str) -> dict | None:
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, '-m', 'yt_dlp', *YTDLP_COMMON_ARGS, *_pot_provider_args(), *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(), EXTRACTION_TIMEOUT)
+    except asyncio.TimeoutError:
+        process.kill()
+        await process.wait()
+        raise ExtractionError(f'yt-dlp timed out after {EXTRACTION_TIMEOUT}s')
+
+    if process.returncode != 0:
+        raise ExtractionError(_last_error_line(stderr))
+    if not stdout.strip():
+        return None
+    try:
+        return json.loads(stdout)
+    except ValueError as exc:
+        raise ExtractionError(f'yt-dlp returned invalid JSON: {exc}')
+
+
+async def _extract_flat(query: str) -> dict | None:
+    """
+    Cheaply lists what a query/URL points at (search result, single track or
+    playlist) without resolving playable stream URLs for every entry up front.
+    """
+    return await _run_ytdlp(
+        '-J', '--flat-playlist', '--playlist-items', f'1:{MAX_PLAYLIST_TRACKS}', query
+    )
+
+
+async def _extract_stream(query: str) -> dict | None:
+    """
+    Resolves the direct, streamable audio URL of a single track, right before
+    playback. Nothing is ever downloaded: FFmpeg reads straight from the
+    returned URL and pipes the decoded audio into Discord.
+    """
+    info = await _run_ytdlp('-J', '--format', 'bestaudio/best', '--no-playlist', query)
+    # Search queries come back wrapped in a one-entry playlist; unwrap it.
+    if info and info.get('entries') is not None:
+        entries = [entry for entry in info['entries'] if entry]
+        info = entries[0] if entries else None
+    return info
 
 
 class Track:
-    def __init__(self, *, query, title, webpage_url, duration, requester):
+    def __init__(self, *, query, title, webpage_url, duration, requester, search_query=None):
         # `query` is what gets re-resolved to a stream URL right before playback, since
         # direct stream URLs expire and shouldn't be resolved for the whole queue at once.
         self.query = query
@@ -72,6 +129,12 @@ class Track:
         self.webpage_url = webpage_url
         self.duration = duration
         self.requester = requester
+        # The user's original search text, if this track came from a search. Kept so
+        # playback can fall back to another provider when the resolved URL breaks.
+        self.search_query = search_query
+        # Stream info resolved ahead of time while the previous track plays, so the
+        # transition between tracks is instant. Consumed (and cleared) by _play_next.
+        self.prefetched: dict | None = None
 
 
 class GuildMusicState:
@@ -88,7 +151,7 @@ class GuildMusicState:
         self.consecutive_failures: int = 0
 
 
-def _track_from_entry(entry: dict, requester_id: int) -> Track:
+def _track_from_entry(entry: dict, requester_id: int, search_query: str | None = None) -> Track:
     webpage_url = entry.get('webpage_url')
     raw_url = entry.get('url')
     if webpage_url:
@@ -108,7 +171,24 @@ def _track_from_entry(entry: dict, requester_id: int) -> Track:
         webpage_url=webpage_url or query,
         duration=entry.get('duration'),
         requester=requester_id,
+        search_query=search_query,
     )
+
+
+def _tracks_from_info(info: dict | None, requester_id: int, search_query: str | None):
+    if not info:
+        return [], None
+
+    entries = info.get('entries')
+    if entries is not None:
+        entries = [entry for entry in entries if entry][:MAX_PLAYLIST_TRACKS]
+        tracks = [_track_from_entry(entry, requester_id, search_query) for entry in entries]
+        # Searches also come back as a "playlist", but their title ("some song") is
+        # not a real playlist title.
+        playlist_title = info.get('title') if search_query is None else None
+        return tracks, playlist_title
+
+    return [_track_from_entry(info, requester_id, search_query)], None
 
 
 async def ensure_voice(ctx: commands.Context):
@@ -157,6 +237,71 @@ class Music(commands.Cog, name="music"):
     def __init__(self, bot):
         self.bot = bot
         self.guild_states: dict[int, GuildMusicState] = {}
+        # Keeps strong references to fire-and-forget prefetch tasks so they aren't
+        # garbage collected mid-flight.
+        self._prefetch_tasks: set[asyncio.Task] = set()
+
+    async def cog_load(self):
+        self.update_ytdlp.start()
+
+    async def cog_unload(self):
+        self.update_ytdlp.cancel()
+        for task in self._prefetch_tasks:
+            task.cancel()
+
+    @tasks.loop(hours=12)
+    async def update_ytdlp(self):
+        """
+        Upgrades yt-dlp and its PO-token plugin in place (on startup and every 12
+        hours after). Since extraction runs yt-dlp as a subprocess, the new version
+        is used on the very next song - site breakage heals itself without
+        redeploying the bot.
+        """
+        before = await self._ytdlp_version()
+
+        command = [sys.executable, '-m', 'pip', 'install', '--upgrade', '--quiet']
+        if sys.prefix == sys.base_prefix:
+            # Not in a virtualenv (e.g. the Docker container, which runs as a non-root
+            # user): install into the user site, which is writable and shadows the
+            # system-wide copy.
+            command.append('--user')
+        command += ['yt-dlp', 'bgutil-ytdlp-pot-provider']
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await asyncio.wait_for(process.communicate(), 300)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            self.bot.logger.warning('yt-dlp self-update timed out')
+            return
+        except OSError as exc:
+            self.bot.logger.warning(f'yt-dlp self-update failed to start: {exc}')
+            return
+
+        if process.returncode != 0:
+            self.bot.logger.warning(f'yt-dlp self-update failed: {_last_error_line(stderr)}')
+            return
+
+        after = await self._ytdlp_version()
+        if after != before:
+            self.bot.logger.info(f'yt-dlp updated: {before} -> {after}')
+
+    async def _ytdlp_version(self) -> str:
+        try:
+            process = await asyncio.create_subprocess_exec(
+                sys.executable, '-m', 'yt_dlp', '--version',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            stdout, _ = await asyncio.wait_for(process.communicate(), 60)
+            return stdout.decode().strip() or 'unknown'
+        except (OSError, asyncio.TimeoutError):
+            return 'unknown'
 
     def get_state(self, guild_id: int) -> GuildMusicState:
         state = self.guild_states.get(guild_id)
@@ -188,24 +333,76 @@ class Music(commands.Cog, name="music"):
         Resolves a query (URL or search term) to a list of Tracks and an optional
         playlist title. This only lists what's available; it does not resolve a
         playable stream URL, that only happens right before a track is played.
+
+        Plain search terms are tried against each provider in SEARCH_PROVIDERS
+        until one returns a result, so a broken provider doesn't take the whole
+        play command down with it.
         """
-        search = not url_rx.match(query)
-        ytdl_query = f'ytsearch1:{query}' if search else query
+        if url_rx.match(query):
+            info = await _extract_flat(query)
+            return _tracks_from_info(info, requester_id, None)
 
-        loop = asyncio.get_running_loop()
-        info = await loop.run_in_executor(None, _extract_flat, ytdl_query)
+        last_error = None
+        for provider in SEARCH_PROVIDERS:
+            try:
+                info = await _extract_flat(f'{provider}1:{query}')
+            except ExtractionError as exc:
+                self.bot.logger.warning(f"Search via {provider} failed for {query!r}: {exc}")
+                last_error = exc
+                continue
+            tracks, _ = _tracks_from_info(info, requester_id, query)
+            if tracks:
+                return tracks, None
 
-        if not info:
-            return [], None
+        if last_error is not None:
+            raise last_error
+        return [], None
 
-        entries = info.get('entries')
-        if entries is not None:
-            entries = [entry for entry in entries if entry][:MAX_PLAYLIST_TRACKS]
-            tracks = [_track_from_entry(entry, requester_id) for entry in entries]
-            playlist_title = info.get('title') if not search else None
-            return tracks, playlist_title
+    async def _resolve_stream_info(self, track: Track) -> dict | None:
+        """
+        Resolves the playable stream info for a track. If the track came from a
+        search and its resolved URL no longer works, the original search text is
+        retried on each provider so playback can transparently switch provider.
+        """
+        candidates = [track.query] if track.query else []
+        if track.search_query:
+            for provider in SEARCH_PROVIDERS:
+                candidate = f'{provider}1:{track.search_query}'
+                if candidate not in candidates:
+                    candidates.append(candidate)
 
-        return [_track_from_entry(info, requester_id)], None
+        last_error = None
+        for candidate in candidates:
+            try:
+                info = await _extract_stream(candidate)
+            except ExtractionError as exc:
+                last_error = exc
+                continue
+            if info and info.get('url'):
+                return info
+
+        if last_error is not None:
+            raise last_error
+        return None
+
+    def _schedule_prefetch(self, state: GuildMusicState):
+        # Resolve the next track's stream URL in the background while the current
+        # track plays, so the transition doesn't pause for a yt-dlp round trip.
+        next_track = state.queue[0] if state.queue else None
+        if next_track is None or next_track.prefetched is not None:
+            return
+
+        async def prefetch(track: Track):
+            try:
+                track.prefetched = await self._resolve_stream_info(track)
+            except ExtractionError:
+                # Resolution is retried (with a user-visible error) when it's
+                # actually this track's turn to play.
+                pass
+
+        task = asyncio.get_running_loop().create_task(prefetch(next_track))
+        self._prefetch_tasks.add(task)
+        task.add_done_callback(self._prefetch_tasks.discard)
 
     async def _notify(self, guild: discord.Guild, state: GuildMusicState, content: str):
         channel = guild.get_channel(state.channel_id) if state.channel_id else None
@@ -242,15 +439,16 @@ class Music(commands.Cog, name="music"):
 
         state.current = track
 
-        loop = asyncio.get_running_loop()
-        try:
-            info = await loop.run_in_executor(None, _extract_stream, track.query)
-            stream_url = info.get('url') if info else None
-        except Exception as exc:
-            state.consecutive_failures += 1
-            await self._notify(guild, state, f"⚠ | Konnte `{track.title}` nicht laden: {exc}")
-            return await self._play_next(guild_id)
+        info, track.prefetched = track.prefetched, None
+        if not info:
+            try:
+                info = await self._resolve_stream_info(track)
+            except Exception as exc:
+                state.consecutive_failures += 1
+                await self._notify(guild, state, f"⚠ | Konnte `{track.title}` nicht laden: {exc}")
+                return await self._play_next(guild_id)
 
+        stream_url = info.get('url') if info else None
         if not stream_url:
             state.consecutive_failures += 1
             await self._notify(guild, state, f"⚠ | Konnte keinen Stream für `{track.title}` finden.")
@@ -280,6 +478,7 @@ class Music(commands.Cog, name="music"):
 
         guild.voice_client.play(source, after=_after)
         await self._notify(guild, state, f"🎶 | Now playing: **{track.title}**")
+        self._schedule_prefetch(state)
 
     @commands.hybrid_command(
         name="play",
