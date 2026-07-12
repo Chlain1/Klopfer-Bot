@@ -746,7 +746,8 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.repeat = True
 
         with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
-            await cog._play_next(1)
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
 
         self.assertIs(state.current, track)
         self.assertEqual(state.queue, [])
@@ -764,8 +765,9 @@ class TestMusicCog(unittest.IsolatedAsyncioTestCase):
         state.queue.append(next_track)
 
         with patch("cogs.music._extract_stream", AsyncMock(return_value={"url": "https://stream"})):
-            await cog._play_next(1)
-            await self.drain_prefetch(cog)
+            with patch("cogs.music.discord.FFmpegPCMAudio"):
+                await cog._play_next(1)
+                await self.drain_prefetch(cog)
 
         self.assertIs(state.current, next_track)
         self.assertEqual(state.queue, [current])
