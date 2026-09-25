@@ -1,9 +1,16 @@
 # Python Klopfer Bot
-Test Coverage:
-[![Coverage](https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg)](https://codecov.io/gh/Chlain1/Klopfer-Bot)
 
-Invite the Bot to your Server:
-[Invite Bot](https://discord.com/oauth2/authorize?client_id=1222645997151326259)
+<p align="center">
+  <a href="https://codecov.io/gh/Chlain1/Klopfer-Bot">
+    <img src="https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <a href="https://discord.com/oauth2/authorize?client_id=1222645997151326259">
+    <img src="" alt="Install to Discord Server">
+  </a>
+</p>
+
+<!-- TODO: Add Install Image source anything -->
+
 
 ## Disclaimer
 
