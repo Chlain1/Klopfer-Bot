@@ -2,6 +2,9 @@
 Test Coverage:
 [![Coverage](https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg)](https://codecov.io/gh/Chlain1/Klopfer-Bot)
 
+Invite the Bot to your Server:
+[Invite Bot](https://discord.com/oauth2/authorize?client_id=1222645997151326259)
+
 ## Disclaimer
 
 Slash commands can take some time to get registered globally, so if you want to test a command you should use
@@ -14,28 +17,6 @@ the `@app_commands.guilds()` decorator so that it gets registered instantly. Exa
 )
 @app_commands.guilds(discord.Object(id=GUILD_ID)) # Place your guild ID here
 ```
-
-## How to download it
-
-This repository is now a template, on the top left you can simply click on "**Use this template**" to create a GitHub
-repository based on this template.
-
-Alternatively you can do the following:
-
-- Clone/Download the repository
-  - To clone it and get the updates you can definitely use the command
-    `git clone`
-- Create a discord bot [here](https://discord.com/developers/applications)
-- Get your bot token
-- Invite your bot on servers using the following invite:
-  https://discord.com/oauth2/authorize?&client_id=YOUR_APPLICATION_ID_HERE&scope=bot+applications.commands&permissions=PERMISSIONS (
-  Replace `YOUR_APPLICATION_ID_HERE` with the application ID and replace `PERMISSIONS` with the required permissions
-  your bot needs that it can be get at the bottom of a this
-  page https://discord.com/developers/applications/YOUR_APPLICATION_ID_HERE/bot)
-
-## How to set up
-
-To set up the bot it was made as simple as possible.
 
 ### `config.json` file
 
