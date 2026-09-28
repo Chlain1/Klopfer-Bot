@@ -1,6 +1,6 @@
 # Klopfer-Bot Docker Deployment
 
-Diese Anleitung beschreibt, wie du den Klopfer-Bot mit Docker und Lavalink deployen kannst.
+Diese Anleitung beschreibt, wie du den Klopfer-Bot mit Docker deployen kannst.
 
 ## Voraussetzungen
 
@@ -18,13 +18,12 @@ Diese Anleitung beschreibt, wie du den Klopfer-Bot mit Docker und Lavalink deplo
 
    Öffne die `.env` Datei und füge deinen Discord Bot Token ein:
    ```
-   DISCORD_TOKEN=dein_discord_bot_token_hier
+   TOKEN=dein_discord_bot_token_hier
    ```
 
 2. **Konfiguration anpassen (optional)**
 
    - `config.json`: Passe den Bot-Prefix und den Invite-Link an
-   - `lavalink/application.yml`: Lavalink-Konfiguration (Passwort, Audio-Quellen, etc.)
 
 ## Deployment
 
@@ -34,19 +33,10 @@ Diese Anleitung beschreibt, wie du den Klopfer-Bot mit Docker und Lavalink deplo
 docker-compose up -d
 ```
 
-Der Bot und Lavalink werden automatisch gestartet. Der Bot wartet, bis Lavalink vollständig hochgefahren ist.
-
 ### Logs ansehen
 
 ```bash
-# Alle Logs
-docker-compose logs -f
-
-# Nur Bot-Logs
 docker-compose logs -f bot
-
-# Nur Lavalink-Logs
-docker-compose logs -f lavalink
 ```
 
 ### Services stoppen
@@ -63,44 +53,34 @@ docker-compose restart
 
 ## Architektur
 
-Der Setup besteht aus zwei Services:
+Der Bot spielt Musik (YouTube, SoundCloud, Bandcamp, ...) ohne einen externen
+Lavalink-Server. Tracks werden über `yt-dlp` aufgelöst und per FFmpeg direkt in
+den Voice-Channel gestreamt - es wird zu keinem Zeitpunkt etwas heruntergeladen
+oder auf die Festplatte geschrieben. Das spart Speicherplatz und Zeit und
+entfällt die Abhängigkeit von einem separaten, ausfallanfälligen Lavalink-Dienst.
 
-1. **Lavalink** (Port 2333)
-   - Audio-Verarbeitungsserver
-   - Unterstützt YouTube, SoundCloud, Bandcamp, Twitch, Vimeo
-   - Läuft in eigenem Container
+Suchanfragen werden zuerst auf YouTube und bei Fehlschlag automatisch auf
+SoundCloud aufgelöst. `yt-dlp` läuft als Subprozess und aktualisiert sich beim
+Start sowie alle 12 Stunden selbst (`pip install --upgrade`), sodass Änderungen
+an den Plattform-APIs ohne Rebuild oder Neustart des Containers geheilt werden -
+es sind keine Cookies oder API-Tokens nötig.
 
-2. **Klopfer-Bot**
-   - Discord Bot mit allen Cogs (Fun, General, Klopfen, Moderation, Music, Owner, Rollbutler)
-   - Verbindet sich automatisch mit Lavalink
-   - Verwendet SQLite-Datenbank (in Volume gemountet)
+Gegen YouTubes Bot-Erkennung ("Sign in to confirm you're not a bot", typisch bei
+Server-/Datacenter-IPs) läuft der Sidecar-Service `pot-provider`
+([bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)),
+der die von YouTube verlangten "PO Tokens" automatisch generiert - ohne Account
+und ohne Cookies. Der Bot findet ihn über die Umgebungsvariable
+`POT_PROVIDER_URL` (gesetzt in `docker-compose.yml`). Fällt der Service aus oder
+ist die Variable nicht gesetzt (z.B. lokale Entwicklung), läuft die Musik ganz
+normal weiter; YouTube kann dann lediglich wieder einzelne Anfragen ablehnen,
+wofür der SoundCloud-Fallback greift.
 
 ## Volumes
 
-- `./database`: Bot-Datenbank (persistent)
-- `./lavalink/logs`: Lavalink-Logs (persistent)
-- `./config.json`: Bot-Konfiguration (read-only)
-- `./lavalink/application.yml`: Lavalink-Konfiguration (read-only)
-
-## Netzwerk
-
-Beide Services kommunizieren über das interne Docker-Netzwerk `klopfer-network`. Der Bot kann Lavalink über den Hostnamen `lavalink` erreichen.
+- `bot-database`: Bot-Datenbank (persistent)
+- `bot-leaderboard`: Leaderboard-Daten (persistent)
 
 ## Troubleshooting
-
-### Bot verbindet sich nicht mit Lavalink
-
-1. Überprüfe, ob Lavalink läuft:
-   ```bash
-   docker-compose ps
-   ```
-
-2. Überprüfe die Lavalink-Logs:
-   ```bash
-   docker-compose logs lavalink
-   ```
-
-3. Stelle sicher, dass das Passwort in `docker-compose.yml` und `lavalink/application.yml` übereinstimmt
 
 ### Musik-Befehle funktionieren nicht
 
@@ -114,31 +94,34 @@ Beide Services kommunizieren über das interne Docker-Netzwerk `klopfer-network`
    docker-compose logs bot
    ```
 
+3. Manche Plattformen (z.B. YouTube) ändern gelegentlich ihre interne API, worauf
+   `yt-dlp` reagieren muss. Der Bot aktualisiert `yt-dlp` (samt PO-Token-Plugin)
+   deshalb automatisch beim Start und alle 12 Stunden - ein manuelles Update oder
+   Rebuild ist normalerweise nicht nötig. Falls Songs trotzdem länger nicht laden,
+   zeigen die Logs (`yt-dlp self-update ...`), ob das Update fehlschlägt.
+
+4. Meldet YouTube "Sign in to confirm you're not a bot", prüfe, ob der
+   `pot-provider`-Service läuft (`docker-compose ps`, `docker-compose logs
+   pot-provider`). Gelegentliches `docker-compose pull pot-provider` hält das
+   Provider-Image aktuell, falls sich Client- und Server-Version zu weit
+   auseinanderentwickeln (yt-dlp warnt dann in den Logs).
+
 ## Entwicklung
 
 Für lokale Entwicklung ohne Docker:
 
-1. Installiere die Dependencies:
+1. Installiere die Dependencies (inklusive FFmpeg, das systemweit installiert sein muss):
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Starte nur Lavalink mit Docker:
-   ```bash
-   docker-compose up -d lavalink
-   ```
-
-3. Führe den Bot lokal aus:
+2. Führe den Bot lokal aus:
    ```bash
    python bot.py
    ```
 
-Der Bot verwendet automatisch `localhost` als Lavalink-Host, wenn keine Umgebungsvariablen gesetzt sind.
-
 ## Produktions-Hinweise
 
-- Ändere das Standard-Passwort in `lavalink/application.yml` und `docker-compose.yml`
 - Verwende ein `.env` File für sensible Daten (nicht in Git committen!)
 - Überwache die Logs regelmäßig
 - Erstelle regelmäßige Backups der Datenbank
-- Passe die Java Memory Settings (`_JAVA_OPTIONS=-Xmx2G`) basierend auf deiner Server-Kapazität an

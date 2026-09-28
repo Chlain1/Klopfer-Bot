@@ -1,10 +1,8 @@
 aiohttp
 aiosqlite
-discord.py
-discord
+discord.py[voice]
 python-dotenv
-pytube
 PyNaCl
-lavalink
-pafy
-feedparser
+yt-dlp
+bgutil-ytdlp-pot-provider
+davey

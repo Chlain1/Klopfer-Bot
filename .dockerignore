@@ -31,7 +31,6 @@ docker-compose.yml
 
 # Logs
 *.log
-lavalink/logs/
 
 # Database (should be mounted as volume)
 *.db

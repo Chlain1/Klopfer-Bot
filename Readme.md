@@ -1,12 +1,16 @@
 # Python Klopfer Bot
 
-## Support
+<p align="center">
+  <a href="https://codecov.io/gh/Chlain1/Klopfer-Bot">
+    <img src="https://codecov.io/gh/Chlain1/Klopfer-Bot/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <a href="https://discord.com/oauth2/authorize?client_id=1222645997151326259">
+    <img src="" alt="Install to Discord Server">
+  </a>
+</p>
 
-Before requesting support, you should know that this template requires you to have at least a **basic knowledge** of
-Python and the library is made for **advanced users**. Do not use this template if you don't know the
-basics or some advanced topics such as OOP or async. [Here's](https://pythondiscord.com/pages/resources) a link for resources to learn python.
+<!-- TODO: Add Install Image source anything -->
 
-All the updates of the template are available [here](UPDATES.md).
 
 ## Disclaimer
 
@@ -20,31 +24,6 @@ the `@app_commands.guilds()` decorator so that it gets registered instantly. Exa
 )
 @app_commands.guilds(discord.Object(id=GUILD_ID)) # Place your guild ID here
 ```
-
-When using the template you confirm that you have read the [license](LICENSE.md) and comprehend that I can take down
-your repository if you do not meet these requirements.
-
-## How to download it
-
-This repository is now a template, on the top left you can simply click on "**Use this template**" to create a GitHub
-repository based on this template.
-
-Alternatively you can do the following:
-
-- Clone/Download the repository
-  - To clone it and get the updates you can definitely use the command
-    `git clone`
-- Create a discord bot [here](https://discord.com/developers/applications)
-- Get your bot token
-- Invite your bot on servers using the following invite:
-  https://discord.com/oauth2/authorize?&client_id=YOUR_APPLICATION_ID_HERE&scope=bot+applications.commands&permissions=PERMISSIONS (
-  Replace `YOUR_APPLICATION_ID_HERE` with the application ID and replace `PERMISSIONS` with the required permissions
-  your bot needs that it can be get at the bottom of a this
-  page https://discord.com/developers/applications/YOUR_APPLICATION_ID_HERE/bot)
-
-## How to set up
-
-To set up the bot it was made as simple as possible.
 
 ### `config.json` file
 
@@ -88,6 +67,10 @@ python bot.py
 
 ## Built With
 
-- [Python 3.11.5](https://www.python.org/)
+- [Python 3.14.2](https://www.python.org/)
 
+## Based on
+
+This Bot was build on the Template from kkrypt0nn
+- [Bot-Template Github](https://github.com/kkrypt0nn/Python-Discord-Bot-Template)
 

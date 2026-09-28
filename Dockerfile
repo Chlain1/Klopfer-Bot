@@ -4,11 +4,12 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for audio playback (optional, ignore errors)
-RUN apt-get update || true && \
-    apt-get install -y --no-install-recommends ffmpeg || true && \
-    apt-get clean || true && \
-    rm -rf /var/lib/apt/lists/* || true
+# Install FFmpeg, required to stream audio (YouTube/SoundCloud/etc.) directly into
+# Discord voice channels without ever downloading tracks to disk.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
 COPY requirements.txt .
@@ -25,5 +26,4 @@ RUN useradd -m -u 1000 botuser && \
 
 USER botuser
 
-# Run the bot with a delay to let Lavalink start
-CMD ["sh", "-c", "sleep 15 && python bot.py"]
+CMD ["python", "bot.py"]

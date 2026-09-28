@@ -1,3 +1,11 @@
+"""
+Copyright © Krypton 2019-Present - https://github.com/kkrypt0nn (https://krypton.ninja)
+Description:
+🐍 A simple template to start to code your own and personalized Discord bot in Python
+
+Version: 6.5.0
+"""
+
 import datetime
 import json
 import logging
@@ -382,4 +390,5 @@ async def on_member_remove(member):
     else:
         bot.logger.warning('No system channel found for ' + guild.name)
 
-bot.run(os.getenv("TOKEN"))
+if __name__ == "__main__":
+    bot.run(os.getenv("TOKEN"))
