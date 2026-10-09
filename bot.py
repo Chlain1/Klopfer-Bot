@@ -14,7 +14,7 @@ import platform
 import random
 import sys
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 import aiosqlite
 import discord
@@ -23,6 +23,17 @@ from discord.ext.commands import Context, bot
 from dotenv import load_dotenv
 
 from database import DatabaseManager
+
+
+LOCAL_TIMEZONE = datetime.now().astimezone().tzinfo
+CHECK_TIMES = [
+    time(hour, (hour - 1) % 60, tzinfo=LOCAL_TIMEZONE)
+    for hour in range(1, 24)
+] + [time(23, 59, tzinfo=LOCAL_TIMEZONE)]
+PERIODIC_MESSAGE_TIMES = [
+    time(hour, hour + 1, tzinfo=LOCAL_TIMEZONE)
+    for hour in range(23)
+]
 
 # Load environment variables from .env file
 load_dotenv()
@@ -303,49 +314,40 @@ class DiscordBot(commands.Bot):
         else:
             raise error
 
+    @tasks.loop(time=PERIODIC_MESSAGE_TIMES)
     async def send_periodic_message(self):
-        while True:
-            #Get current Time
-            currentTime = datetime.now()
-
-            #Check if minutes == hours
-            if currentTime.hour == currentTime.minute-1:
-                embed = discord.Embed(
-                    description='Naaaaaa? Habt ihr geklopft?'
-                )
-                channel = self.get_channel(778976736296566814)
-                if channel:
-                    await channel.send(embed=embed)
-            # Sleep for a minute before checking again
-            await asyncio.sleep(60)
+        embed = discord.Embed(
+            description='Naaaaaa? Habt ihr geklopft?'
+        )
+        channel = self.get_channel(778976736296566814)
+        if channel:
+            await channel.send(embed=embed)
 
     async def did_you_klopf(self):
-        asyncio.create_task(self.send_periodic_message())
+        self.send_periodic_message.start()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(time=CHECK_TIMES)
     async def check_time(self):
-        now = datetime.now()
         guild_id = 746337211074478190
         role_id = 1225212871462355034
-        if now.hour == (now.minute + 1) % 60 or (now.hour == 23 and now.minute == 59):
-            guild = self.get_guild(guild_id)
-            print("its hour == minute+1 baby")
-            if guild is None:
-                print(f"Guild with id {guild_id} not found")
-                return
+        guild = self.get_guild(guild_id)
+        print("its hour == minute+1 baby")
+        if guild is None:
+            print(f"Guild with id {guild_id} not found")
+            return
 
-            role = guild.get_role(role_id)
-            if role is None:
-                print(f"Role with id {role_id} not found")
-                return
+        role = guild.get_role(role_id)
+        if role is None:
+            print(f"Role with id {role_id} not found")
+            return
 
-            for member in guild.members:
-                if role in member.roles:
-                    try:
-                        await member.remove_roles(role)
-                        print(f"Role {role.name} has been removed from {member.name}")
-                    except discord.HTTPException:
-                        print(f"Failed to remove role {role.name} from {member.name}")
+        for member in guild.members:
+            if role in member.roles:
+                try:
+                    await member.remove_roles(role)
+                    print(f"Role {role.name} has been removed from {member.name}")
+                except discord.HTTPException:
+                    print(f"Failed to remove role {role.name} from {member.name}")
 
 
 

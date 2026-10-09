@@ -138,50 +138,29 @@ class TestBot(unittest.IsolatedAsyncioTestCase):
         channel = DummyChannel()
         bot.get_channel = MagicMock(return_value=channel)
 
-        async def fake_sleep(_):
-            raise asyncio.CancelledError()
-
-        with patch("bot.asyncio.sleep", side_effect=fake_sleep):
-            with patch("bot.datetime", new=FixedDatetime(10, 11)):
-                with self.assertRaises(asyncio.CancelledError):
-                    await bot.send_periodic_message()
+        await bot.send_periodic_message.coro(bot)
         channel.send.assert_awaited()
 
     async def test_send_periodic_message_no_channel(self):
         bot = bot_module.DiscordBot()
         bot.get_channel = MagicMock(return_value=None)
 
-        async def fake_sleep(_):
-            raise asyncio.CancelledError()
+        await bot.send_periodic_message.coro(bot)
 
-        with patch("bot.asyncio.sleep", side_effect=fake_sleep):
-            with patch("bot.datetime", new=FixedDatetime(10, 11)):
-                with self.assertRaises(asyncio.CancelledError):
-                    await bot.send_periodic_message()
-
-    async def test_send_periodic_message_no_trigger(self):
+    async def test_send_periodic_message_sends(self):
         bot = bot_module.DiscordBot()
         channel = DummyChannel()
         bot.get_channel = MagicMock(return_value=channel)
 
-        async def fake_sleep(_):
-            raise asyncio.CancelledError()
-
-        with patch("bot.asyncio.sleep", side_effect=fake_sleep):
-            with patch("bot.datetime", new=FixedDatetime(10, 10)):
-                with self.assertRaises(asyncio.CancelledError):
-                    await bot.send_periodic_message()
-        channel.send.assert_not_called()
+        await bot.send_periodic_message.coro(bot)
+        channel.send.assert_awaited_once()
 
     async def test_did_you_klopf(self):
         bot = bot_module.DiscordBot()
-        def fake_create_task(coro):
-            coro.close()
-            return MagicMock()
+        bot.send_periodic_message.start = MagicMock()
 
-        with patch("bot.asyncio.create_task", side_effect=fake_create_task) as create_task:
-            await bot.did_you_klopf()
-        self.assertTrue(create_task.called)
+        await bot.did_you_klopf()
+        bot.send_periodic_message.start.assert_called_once()
 
     async def test_check_time_branches(self):
         bot = bot_module.DiscordBot()
